@@ -1,0 +1,10 @@
+numpy
+pandas
+matplotlib
+scikit-learn
+scikit-bio
+scipy
+pymrmr
+borutapy
+imbalanced-learn
+shap
