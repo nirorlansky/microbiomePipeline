@@ -1,198 +1,219 @@
 import numpy as np
 import dirichlet
+from imblearn.over_sampling.base import BaseOverSampler
 
-# ---------- helpers ----------
+class MyOverSampler(BaseOverSampler):
 
-def replace_zeros_with_dynamic_eps(X, orders_below=3, fallback=1e-12):
-    """
-    Input X is proportions (each row ~1). Replace zeros per feature using a dynamic epsilon:
-      eps_vec[j]  = min positive in column j   (returned as-is)
-      eps_repl[j] = eps_vec[j] * 10^(-orders_below)  (used for replacement)
-    Then renormalize rows to sum to 1.
+    def __init__(self, 
+                 sampling_strategy=0.9, 
+                 random_state=42, 
+                 jitter=0.00, 
+                 method="mle",
+                 use_dynamic_eps=False,
+                 orders_below=3,
+                 fallback=1e-12):
+        super().__init__(sampling_strategy=sampling_strategy)
+        self.random_state = random_state
+        self.jitter = jitter
+        self.method = method
+        self.use_dynamic_eps = use_dynamic_eps
+        self.orders_below = orders_below
+        self.fallback = fallback
 
-    Returns:
-      X2: normalized proportions (rows sum ~1) after zero-replacement
-      eps_vec: per-feature min positive (>0) values (NOT scaled)
-    """
-    pos = np.where(X > 0, X, np.inf)
-    col_min_pos = pos.min(axis=0)
-    has_col_pos = np.isfinite(col_min_pos)
+    def _fit_resample(self, X, y):
+        return self.balance_healthy_dirichlet(
+            X, y,
+            method=self.method ,  # or "mom"
+            target_ratio=self.sampling_strategy*10,  # target ratio of Healthy to Sick
+            seed=self.random_state,
+            use_dynamic_eps=self.use_dynamic_eps,
+            orders_below=self.orders_below,
+            fallback=self.fallback,
+        )
 
-    # global min positive if any
-    global_min_pos = col_min_pos[has_col_pos].min() if np.any(has_col_pos) else np.inf
+    # ---------- helpers ----------
 
-    # store original per-feature min-positive (as requested)
-    eps_vec = col_min_pos.copy()
-    eps_vec[~has_col_pos] = global_min_pos if np.isfinite(global_min_pos) else fallback
+    def replace_zeros_with_dynamic_eps(self, X, orders_below=3, fallback=1e-12):
+        """
+        Input X is proportions (each row ~1). Replace zeros per feature using a dynamic epsilon:
+        eps_vec[j]  = min positive in column j   (returned as-is)
+        eps_repl[j] = eps_vec[j] * 10^(-orders_below)  (used for replacement)
+        Then renormalize rows to sum to 1.
 
-    eps_repl = eps_vec * (10.0 ** (-orders_below))
-    X2 = np.where(X <= 0, eps_repl, X)
+        Returns:
+        X2: normalized proportions (rows sum ~1) after zero-replacement
+        eps_vec: per-feature min positive (>0) values (NOT scaled)
+        """
+        pos = np.where(X > 0, X, np.inf)
+        col_min_pos = pos.min(axis=0)
+        has_col_pos = np.isfinite(col_min_pos)
 
-    rs = X2.sum(axis=1, keepdims=True)
-    rs = np.clip(rs, 1e-12, None)  # guard division
-    X2 = X2 / rs
-    return X2, eps_vec
+        # global min positive if any
+        global_min_pos = col_min_pos[has_col_pos].min() if np.any(has_col_pos) else np.inf
 
-def zero_below_eps_and_renormalize(synth_prop, eps_vec):
-    """
-    Zero-out synth_prop[:, j] where synth_prop[:, j] < eps_vec[j],
-    then renormalize each row to sum to 1. If a row becomes all zeros, fallback to original row.
-    """
-    sp = np.where(synth_prop < eps_vec, 0.0, synth_prop)
-    rs = sp.sum(axis=1, keepdims=True)
-    nz = (rs.squeeze() > 0)
-    if np.any(nz):
-        sp[nz] = sp[nz] / rs[nz, :]
-    if np.any(~nz):
-        sp[~nz] = synth_prop[~nz]
-    return sp
-import numpy as np
-import dirichlet
+        # store original per-feature min-positive (as requested)
+        eps_vec = col_min_pos.copy()
+        eps_vec[~has_col_pos] = global_min_pos if np.isfinite(global_min_pos) else fallback
 
-# ---------- helpers ----------
+        eps_repl = eps_vec * (10.0 ** (-orders_below))
+        X2 = np.where(X <= 0, eps_repl, X)
 
-def replace_zeros_with_dynamic_eps(X, orders_below=3, fallback=1e-12):
-    """
-    X: proportions (rows ~1). Make X strictly positive per feature using dynamic eps.
-      eps_vec[j]  = min positive in column j   (returned as-is)
-      eps_repl[j] = eps_vec[j] * 10^(-orders_below)  (used for replacement)
-    Then renormalize rows to sum to 1.
+        rs = X2.sum(axis=1, keepdims=True)
+        rs = np.clip(rs, 1e-12, None)  # guard division
+        X2 = X2 / rs
+        return X2, eps_vec
 
-    Returns:
-      X2: normalized proportions after zero-replacement
-      eps_vec: per-feature min positive (>0) values (NOT scaled)
-    """
-    pos = np.where(X > 0, X, np.inf)
-    col_min_pos = pos.min(axis=0)
-    has_col_pos = np.isfinite(col_min_pos)
-    global_min_pos = col_min_pos[has_col_pos].min() if np.any(has_col_pos) else np.inf
+    def zero_below_eps_and_renormalize(self, synth_prop, eps_vec):
+        """
+        Zero-out synth_prop[:, j] where synth_prop[:, j] < eps_vec[j],
+        then renormalize each row to sum to 1. If a row becomes all zeros, fallback to original row.
+        """
+        sp = np.where(synth_prop < eps_vec, 0.0, synth_prop)
+        rs = sp.sum(axis=1, keepdims=True)
+        nz = (rs.squeeze() > 0)
+        if np.any(nz):
+            sp[nz] = sp[nz] / rs[nz, :]
+        if np.any(~nz):
+            sp[~nz] = synth_prop[~nz]
+        return sp
 
-    # store original per-feature min-positive (as requested)
-    eps_vec = col_min_pos.copy()
-    eps_vec[~has_col_pos] = global_min_pos if np.isfinite(global_min_pos) else fallback
+    # ---------- helpers ----------
 
-    eps_repl = eps_vec * (10.0 ** (-orders_below))
-    X2 = np.where(X <= 0, eps_repl, X)
+    def replace_zeros_with_dynamic_eps(self, X, orders_below=3, fallback=1e-12):
+        """
+        X: proportions (rows ~1). Make X strictly positive per feature using dynamic eps.
+        eps_vec[j]  = min positive in column j   (returned as-is)
+        eps_repl[j] = eps_vec[j] * 10^(-orders_below)  (used for replacement)
+        Then renormalize rows to sum to 1.
 
-    rs = X2.sum(axis=1, keepdims=True)
-    rs = np.clip(rs, 1e-12, None)
-    X2 = X2 / rs
-    return X2, eps_vec
+        Returns:
+        X2: normalized proportions after zero-replacement
+        eps_vec: per-feature min positive (>0) values (NOT scaled)
+        """
+        pos = np.where(X > 0, X, np.inf)
+        col_min_pos = pos.min(axis=0)
+        has_col_pos = np.isfinite(col_min_pos)
+        global_min_pos = col_min_pos[has_col_pos].min() if np.any(has_col_pos) else np.inf
 
-def zero_below_eps_and_renormalize(synth_prop, eps_vec):
-    """
-    Zero-out synth_prop[:, j] where synth_prop[:, j] < eps_vec[j],
-    then renormalize each row to sum to 1. If a row becomes all zeros, fallback to original row.
-    """
-    sp = np.where(synth_prop < eps_vec, 0.0, synth_prop)
-    rs = sp.sum(axis=1, keepdims=True)
-    nz = (rs.squeeze() > 0)
-    if np.any(nz):
-        sp[nz] = sp[nz] / rs[nz, :]
-    if np.any(~nz):
-        sp[~nz] = synth_prop[~nz]
-    return sp
+        # store original per-feature min-positive (as requested)
+        eps_vec = col_min_pos.copy()
+        eps_vec[~has_col_pos] = global_min_pos if np.isfinite(global_min_pos) else fallback
 
-# ---------- unified balancer ----------
+        eps_repl = eps_vec * (10.0 ** (-orders_below))
+        X2 = np.where(X <= 0, eps_repl, X)
 
-def balance_healthy_dirichlet(
-    X_train,
-    y_train,
-    method="mle",           # "mle" or "mom"
-    target_ratio=9.0,
-    seed=42,
-    use_dynamic_eps=False,
-    orders_below=3,
-    fallback=1e-12,
-):
-    """
-    Balance by adding synthetic Healthy samples drawn from a Dirichlet fitted on the Healthy group.
-    Assumes each row of X_train already sums to ~1.
+        rs = X2.sum(axis=1, keepdims=True)
+        rs = np.clip(rs, 1e-12, None)
+        X2 = X2 / rs
+        return X2, eps_vec
 
-    method:
-      - "mle": estimate alpha via maximum likelihood (ericsuh/dirichlet)
-      - "mom": estimate alpha via method-of-moments
+    def zero_below_eps_and_renormalize(self, synth_prop, eps_vec):
+        """
+        Zero-out synth_prop[:, j] where synth_prop[:, j] < eps_vec[j],
+        then renormalize each row to sum to 1. If a row becomes all zeros, fallback to original row.
+        """
+        sp = np.where(synth_prop < eps_vec, 0.0, synth_prop)
+        rs = sp.sum(axis=1, keepdims=True)
+        nz = (rs.squeeze() > 0)
+        if np.any(nz):
+            sp[nz] = sp[nz] / rs[nz, :]
+        if np.any(~nz):
+            sp[~nz] = synth_prop[~nz]
+        return sp
 
-    use_dynamic_eps=True:
-      - Before fitting: replace zeros with dynamic per-feature eps and renormalize
-      - After sampling: zero-out values below ORIGINAL per-feature min-positive (eps_vec) and renormalize
+    # ---------- unified balancer ----------
 
-    Returns:
-      X_balanced: np.ndarray (n_samples + added, n_features)
-      y_balanced: np.ndarray (n_samples + added,)
-      synth_prop: np.ndarray of synthetic Healthy samples (proportions)
-      info: dict with counts, target, alpha, and eps_vec (if used)
-    """
-    rng = np.random.default_rng(seed)
+    def balance_healthy_dirichlet(self,
+        X_train,
+        y_train,
+        method="mle",           # "mle" or "mom"
+        target_ratio=9.0,
+        seed=42,
+        use_dynamic_eps=False,
+        orders_below=3,
+        fallback=1e-12,
+    ):
+        """
+        Balance by adding synthetic Healthy samples drawn from a Dirichlet fitted on the Healthy group.
+        Assumes each row of X_train already sums to ~1.
 
-    healthy_count = int(np.sum(y_train == 'H'))
-    sick_count    = int(np.sum(y_train == 'S'))
-    target_healthy = int(target_ratio * sick_count)
-    samples_to_add = max(0, target_healthy - healthy_count)
-    if samples_to_add == 0:
-        print("No samples to add; already at or above target ratio.")
-        return X_train, y_train, np.array([]), {
-            "method": method,
-            "healthy_count": healthy_count,
-            "sick_count": sick_count,
+        method:
+        - "mle": estimate alpha via maximum likelihood (ericsuh/dirichlet)
+        - "mom": estimate alpha via method-of-moments
+
+        use_dynamic_eps=True:
+        - Before fitting: replace zeros with dynamic per-feature eps and renormalize
+        - After sampling: zero-out values below ORIGINAL per-feature min-positive (eps_vec) and renormalize
+
+        Returns:
+        X_balanced: np.ndarray (n_samples + added, n_features)
+        y_balanced: np.ndarray (n_samples + added,)
+        synth_prop: np.ndarray of synthetic Healthy samples (proportions)
+        info: dict with counts, target, alpha, and eps_vec (if used)
+        """
+        rng = np.random.default_rng(seed)
+
+        healthy_count = int(np.sum(y_train == 'H'))
+        sick_count    = int(np.sum(y_train == 'S'))
+        target_healthy = int(target_ratio * sick_count)
+        samples_to_add = max(0, target_healthy - healthy_count)
+        if samples_to_add == 0:
+            print("No samples to add; already at or above target ratio.")
+            return X_train, y_train
+
+        # Healthy proportions (normalize just in case)
+        healthy_data = X_train[y_train == 'H']
+        rs = healthy_data.sum(axis=1, keepdims=True)
+        rs = np.clip(rs, 1e-12, None)
+        healthy_prop = healthy_data / rs
+
+        eps_vec = None
+        if use_dynamic_eps:
+            healthy_prop, eps_vec = self.replace_zeros_with_dynamic_eps(
+                healthy_prop, orders_below=orders_below, fallback=fallback
+            )
+        elif method.lower() == "mle":
+            # Minimal static clip just to avoid log(0) in MLE
+            healthy_prop = np.clip(healthy_prop, fallback, None)
+            healthy_prop = healthy_prop / healthy_prop.sum(axis=1, keepdims=True)
+
+        method_l = method.lower()
+        if method_l == "mom":
+            # Method of Moments on proportions
+            mu  = healthy_prop.mean(axis=0)
+            var = np.clip(healthy_prop.var(axis=0), 1e-12, None)
+            alpha0_est = (mu * (1 - mu) / var) - 1
+            mask = np.isfinite(alpha0_est) & (alpha0_est > 0)
+            if not np.any(mask):
+                raise ValueError("MoM failed: no positive/finite alpha0 estimates on proportions. Try method='mle' or use_dynamic_eps=True.")
+            alpha0   = float(np.mean(alpha0_est[mask]))
+            alpha_vec = mu * alpha0
+        elif method_l == "mle":
+            # Maximum Likelihood on proportions
+            alpha_vec = dirichlet.mle(healthy_prop)
+        else:
+            raise ValueError("method must be 'mle' or 'mom'.")
+
+        # Sample synthetic proportions
+        synth_prop = rng.dirichlet(alpha_vec, size=samples_to_add)
+
+        # Optional post-process: zero below ORIGINAL per-feature eps, then renormalize
+        if use_dynamic_eps and eps_vec is not None:
+            synth_prop = self.zero_below_eps_and_renormalize(synth_prop, eps_vec)
+
+        # Append (rows all sum to 1)
+        X_balanced = np.vstack([X_train, synth_prop])
+        y_balanced = np.hstack([y_train, np.full(samples_to_add, 'H', dtype=y_train.dtype)])
+
+        info = {
+            "method": method_l,
+            "healthy_count": int(np.sum(y_balanced == 'H')),
+            "sick_count": int(np.sum(y_balanced == 'S')),
             "target_healthy": target_healthy,
-            "alpha": None,
-            "eps_vec_min_positive": None
+            "alpha": alpha_vec,
+            "eps_vec_min_positive": eps_vec  # None if use_dynamic_eps=False
         }
 
-    # Healthy proportions (normalize just in case)
-    healthy_data = X_train[y_train == 'H']
-    rs = healthy_data.sum(axis=1, keepdims=True)
-    rs = np.clip(rs, 1e-12, None)
-    healthy_prop = healthy_data / rs
-
-    eps_vec = None
-    if use_dynamic_eps:
-        healthy_prop, eps_vec = replace_zeros_with_dynamic_eps(
-            healthy_prop, orders_below=orders_below, fallback=fallback
-        )
-    elif method.lower() == "mle":
-        # Minimal static clip just to avoid log(0) in MLE
-        healthy_prop = np.clip(healthy_prop, fallback, None)
-        healthy_prop = healthy_prop / healthy_prop.sum(axis=1, keepdims=True)
-
-    method_l = method.lower()
-    if method_l == "mom":
-        # Method of Moments on proportions
-        mu  = healthy_prop.mean(axis=0)
-        var = np.clip(healthy_prop.var(axis=0), 1e-12, None)
-        alpha0_est = (mu * (1 - mu) / var) - 1
-        mask = np.isfinite(alpha0_est) & (alpha0_est > 0)
-        if not np.any(mask):
-            raise ValueError("MoM failed: no positive/finite alpha0 estimates on proportions. Try method='mle' or use_dynamic_eps=True.")
-        alpha0   = float(np.mean(alpha0_est[mask]))
-        alpha_vec = mu * alpha0
-    elif method_l == "mle":
-        # Maximum Likelihood on proportions
-        alpha_vec = dirichlet.mle(healthy_prop)
-    else:
-        raise ValueError("method must be 'mle' or 'mom'.")
-
-    # Sample synthetic proportions
-    synth_prop = rng.dirichlet(alpha_vec, size=samples_to_add)
-
-    # Optional post-process: zero below ORIGINAL per-feature eps, then renormalize
-    if use_dynamic_eps and eps_vec is not None:
-        synth_prop = zero_below_eps_and_renormalize(synth_prop, eps_vec)
-
-    # Append (rows all sum to 1)
-    X_balanced = np.vstack([X_train, synth_prop])
-    y_balanced = np.hstack([y_train, np.full(samples_to_add, 'H', dtype=y_train.dtype)])
-
-    info = {
-        "method": method_l,
-        "healthy_count": int(np.sum(y_balanced == 'H')),
-        "sick_count": int(np.sum(y_balanced == 'S')),
-        "target_healthy": target_healthy,
-        "alpha": alpha_vec,
-        "eps_vec_min_positive": eps_vec  # None if use_dynamic_eps=False
-    }
-
-    print(f"[{method_l.upper()}] Added synthetic healthy: {samples_to_add} | Final H/S: {info['healthy_count']}/{info['sick_count']}")
-    return X_balanced, y_balanced
+        print(f"[{method_l.upper()}] Added synthetic healthy: {samples_to_add} | Final H/S: {info['healthy_count']}/{info['sick_count']}")
+        return X_balanced, y_balanced
 

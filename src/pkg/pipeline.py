@@ -14,6 +14,8 @@ from imblearn.base import FunctionSampler
 from sklearn.base import clone  
 from steps.relative_abundance import RelativeAbundance
 from steps.remainder_col import AddRemainder
+from samplers.dirichlet_new import MyOverSampler
+
 
 identity_sampler = FunctionSampler(func=lambda X, y: (X, y))  # "no resampling" baseline
 
@@ -27,6 +29,11 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
         samp = identity_sampler
     elif sampler == "smote":
         samp = SMOTE(random_state=random_state)
+    elif sampler == "Dirichlet_MLE_thresholding":
+        samp = MyOverSampler(
+            method="mle",
+            use_dynamic_eps=True,
+        )
     else:
         raise ValueError(f"Unknown sampler: {sampler}")
 
@@ -55,7 +62,7 @@ def evaluate_strategies(X, y, strategies, k_features=200, random_state=42):
 
     scorers = {
         "roc_auc": "roc_auc",
-        "aupr": make_scorer(average_precision_score, needs_threshold=True),
+        "aupr": "average_precision",  # FIXED: use built-in string scorer
         "f1": "f1",
         "acc": "accuracy",
     }
