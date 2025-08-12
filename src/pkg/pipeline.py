@@ -14,7 +14,7 @@ from imblearn.base import FunctionSampler
 from sklearn.base import clone  
 from steps.relative_abundance import RelativeAbundance
 from steps.remainder_col import AddRemainder
-from samplers.dirichlet_new import MyOverSampler
+from samplers.dirichlet_new import DirichletSampler
 
 
 identity_sampler = FunctionSampler(func=lambda X, y: (X, y))  # "no resampling" baseline
@@ -30,7 +30,7 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
     elif sampler == "smote":
         samp = SMOTE(random_state=random_state)
     elif sampler == "Dirichlet_MLE_thresholding":
-        samp = MyOverSampler(
+        samp = DirichletSampler(
             method="mle",
             use_dynamic_eps=True,
         )

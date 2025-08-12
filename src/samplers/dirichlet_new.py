@@ -5,7 +5,7 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..")))
 from pkg.globals import *
 
-class MyOverSampler(BaseOverSampler):
+class DirichletSampler(BaseOverSampler):
 
     def __init__(self, 
                  sampling_strategy=0.9, 
