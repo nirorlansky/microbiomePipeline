@@ -9,6 +9,10 @@
 # 6) Scale rows so each row sums to 10000
 # 7) Return/save X_train and y_train
 
+
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..")))
+
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -120,8 +124,8 @@ X_bal_mom, y_bal_mom =  balance_healthy_samples(
 )
 
 # Save MoM-balanced outputs
-pd.DataFrame(X_bal_mom, columns=features).to_csv("data_files/X_balanced_mom.csv", index=False)
-pd.DataFrame({"y_train": y_bal_mom}).to_csv("data_files/y_balanced_mom.csv", index=False)
+pd.DataFrame(X_bal_mom, columns=features).to_csv("tests/data_files/X_balanced_mom.csv", index=False)
+pd.DataFrame({"y_train": y_bal_mom}).to_csv("tests/data_files/y_balanced_mom.csv", index=False)
 
 print("\n\nbalance_with_dirichlet_mle (MLE)\n")
 X_bal_mle, y_bal_mle, synth_samples, info = balance_with_dirichlet_mle(
@@ -135,8 +139,8 @@ X_bal_mle, y_bal_mle, synth_samples, info = balance_with_dirichlet_mle(
 )
 
 # Save MLE-balanced outputs
-pd.DataFrame(X_bal_mle, columns=features).to_csv("data_files/X_balanced_mle.csv", index=False)
-pd.DataFrame({"y_train": y_bal_mle}).to_csv("data_files/y_balanced_mle.csv", index=False)
+pd.DataFrame(X_bal_mle, columns=features).to_csv("tests/data_files/X_balanced_mle.csv", index=False)
+pd.DataFrame({"y_train": y_bal_mle}).to_csv("tests/data_files/y_balanced_mle.csv", index=False)
 
 print("\nSaved:")
 print("  data_files/X_balanced_mom.csv")
