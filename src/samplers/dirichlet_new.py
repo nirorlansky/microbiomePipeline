@@ -1,6 +1,9 @@
 import numpy as np
 import dirichlet
 from imblearn.over_sampling.base import BaseOverSampler
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..")))
+from pkg.globals import *
 
 class MyOverSampler(BaseOverSampler):
 
@@ -153,8 +156,8 @@ class MyOverSampler(BaseOverSampler):
         """
         rng = np.random.default_rng(seed)
 
-        healthy_count = int(np.sum(y_train == 'H'))
-        sick_count    = int(np.sum(y_train == 'S'))
+        healthy_count = int(np.sum(y_train == HEALTHY))
+        sick_count    = int(np.sum(y_train == SICK))
         target_healthy = int(target_ratio * sick_count)
         samples_to_add = max(0, target_healthy - healthy_count)
         if samples_to_add == 0:
@@ -162,7 +165,11 @@ class MyOverSampler(BaseOverSampler):
             return X_train, y_train
 
         # Healthy proportions (normalize just in case)
-        healthy_data = X_train[y_train == 'H']
+        healthy_data = X_train[y_train == HEALTHY]
+        if healthy_data.shape[0] == 0:
+            print("No healthy samples in this fold; skipping oversampling.")
+            return X_train, y_train
+
         rs = healthy_data.sum(axis=1, keepdims=True)
         rs = np.clip(rs, 1e-12, None)
         healthy_prop = healthy_data / rs
@@ -203,12 +210,12 @@ class MyOverSampler(BaseOverSampler):
 
         # Append (rows all sum to 1)
         X_balanced = np.vstack([X_train, synth_prop])
-        y_balanced = np.hstack([y_train, np.full(samples_to_add, 'H', dtype=y_train.dtype)])
+        y_balanced = np.hstack([y_train, np.full(samples_to_add, HEALTHY, dtype=y_train.dtype)])
 
         info = {
             "method": method_l,
-            "healthy_count": int(np.sum(y_balanced == 'H')),
-            "sick_count": int(np.sum(y_balanced == 'S')),
+            "healthy_count": int(np.sum(y_balanced == HEALTHY)),
+            "sick_count": int(np.sum(y_balanced == SICK)),
             "target_healthy": target_healthy,
             "alpha": alpha_vec,
             "eps_vec_min_positive": eps_vec  # None if use_dynamic_eps=False
