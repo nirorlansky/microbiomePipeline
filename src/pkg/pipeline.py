@@ -34,6 +34,21 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
             method="mle",
             use_dynamic_eps=True,
         )
+    elif sampler == "Dirichlet_MLE":
+        samp = DirichletSampler(
+            method="mle",
+            use_dynamic_eps=False,
+        )
+    elif sampler == "Dirichlet_MoM_thresholding":
+        samp = DirichletSampler(
+            method="mom",
+            use_dynamic_eps=True,
+        )
+    elif sampler == "Dirichlet_MoM":
+        samp = DirichletSampler(
+            method="mom",
+            use_dynamic_eps=False,
+        )
     else:
         raise ValueError(f"Unknown sampler: {sampler}")
 
