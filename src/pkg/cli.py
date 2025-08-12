@@ -24,9 +24,7 @@ X, y = load_data(metadata_path, microbiome_path, serum_lipo_path)
 strategies = {
     "No Resampling": "none",
     "SMOTE": "smote",
-    "BorderlineSMOTE": "bsmote",
-    "ADASYN": "adasyn",
-    "RandomOverSampler": "ros",
+    "Dirichlet MLE with thresholding": "Dirichlet_MLE_thresholding"
 }
 table = evaluate_strategies(X, y, strategies, k_features=200, random_state=42)
 print(table)
