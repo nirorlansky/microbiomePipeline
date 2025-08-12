@@ -12,7 +12,7 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from dirichlet_new import balance_healthy_samples, balance_with_dirichlet_mle
+from src.samplers.dirichlet_new import balance_healthy_samples, balance_with_dirichlet_mle
 
 
 def prepare_microbiome_dataset(
