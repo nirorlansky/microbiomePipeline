@@ -80,37 +80,7 @@ class MyOverSampler(BaseOverSampler):
             sp[~nz] = synth_prop[~nz]
         return sp
 
-    # ---------- helpers ----------
 
-    def replace_zeros_with_dynamic_eps(self, X, orders_below=3, fallback=1e-12):
-        """
-        X: proportions (rows ~1). Make X strictly positive per feature using dynamic eps.
-        eps_vec[j]  = min positive in column j   (returned as-is)
-        eps_repl[j] = eps_vec[j] * 10^(-orders_below)  (used for replacement)
-        Then renormalize rows to sum to 1.
-
-        Returns:
-        X2: normalized proportions after zero-replacement
-        eps_vec: per-feature min positive (>0) values (NOT scaled)
-        """
-        pos = np.where(X > 0, X, np.inf)
-        col_min_pos = pos.min(axis=0)
-        has_col_pos = np.isfinite(col_min_pos)
-        global_min_pos = col_min_pos[has_col_pos].min() if np.any(has_col_pos) else np.inf
-
-        # store original per-feature min-positive (as requested)
-        eps_vec = col_min_pos.copy()
-        eps_vec[~has_col_pos] = global_min_pos if np.isfinite(global_min_pos) else fallback
-
-        eps_repl = eps_vec * (10.0 ** (-orders_below))
-        X2 = np.where(X <= 0, eps_repl, X)
-
-        rs = X2.sum(axis=1, keepdims=True)
-        rs = np.clip(rs, 1e-12, None)
-        X2 = X2 / rs
-        return X2, eps_vec
-
-    def zero_below_eps_and_renormalize(self, synth_prop, eps_vec):
         """
         Zero-out synth_prop[:, j] where synth_prop[:, j] < eps_vec[j],
         then renormalize each row to sum to 1. If a row becomes all zeros, fallback to original row.
