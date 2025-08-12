@@ -159,14 +159,7 @@ class MyOverSampler(BaseOverSampler):
         samples_to_add = max(0, target_healthy - healthy_count)
         if samples_to_add == 0:
             print("No samples to add; already at or above target ratio.")
-            return X_train, y_train, np.array([]), {
-                "method": method,
-                "healthy_count": healthy_count,
-                "sick_count": sick_count,
-                "target_healthy": target_healthy,
-                "alpha": None,
-                "eps_vec_min_positive": None
-            }
+            return X_train, y_train
 
         # Healthy proportions (normalize just in case)
         healthy_data = X_train[y_train == 'H']

@@ -62,7 +62,7 @@ def evaluate_strategies(X, y, strategies, k_features=200, random_state=42):
 
     scorers = {
         "roc_auc": "roc_auc",
-        "aupr": make_scorer(average_precision_score, needs_threshold=True),
+        "aupr": "average_precision",  # FIXED: use built-in string scorer
         "f1": "f1",
         "acc": "accuracy",
     }
