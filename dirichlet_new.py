@@ -1,25 +1,35 @@
 import numpy as np
 import dirichlet
+import pandas as pd
 
 # ====== Input ======
 # X_train: numpy array of shape (n_samples, n_features) - each row sums to 1
 # y_train: numpy array of shape (n_samples,) - values are 'H' (Healthy) or 'S' (Sick)
 # Below is an example dataset for demonstration purposes
-np.random.seed(42)
-n_features = 5
-X_train = np.random.dirichlet(alpha=[2, 5, 3, 4, 6], size=1000)
-y_train = np.array(['H'] * 100 + ['S'] * 900)  # 100 healthy, 900 sick
 
-def balance_healthy_samples(X_train, y_train):
+# np.random.seed(42)
+# n_features = 5
+# X_train = np.random.dirichlet(alpha=[2, 5, 3, 4, 6], size=1000)
+# y_train = np.array(['H'] * 100 + ['S'] * 900)  # 100 healthy, 900 sick
+
+def balance_healthy_samples(X_train, y_train, target_ratio=9.0, seed=42):
+    """
+    Balance by adding synthetic Healthy samples drawn from a Dirichlet
+    fitted via Method of Moments (MoM).
+    """
+    rng = np.random.default_rng(seed)
+
     # ====== Step 1: Count healthy and sick samples ======
-    healthy_count = np.sum(y_train == 'H')
-    sick_count = np.sum(y_train == 'S')
+    healthy_count = int(np.sum(y_train == 'H'))
+    sick_count = int(np.sum(y_train == 'S'))
 
-    # ====== Step 2: Calculate how many healthy samples are needed after balancing ======
-    # Target: Healthy count should be 9 × Sick count
-    target_healthy = 9 * sick_count
-    samples_to_add = target_healthy - healthy_count
-    if samples_to_add <= 0:
+    # ====== Step 2: Target Healthy count and how many to add (ensure ints) ======
+    target_healthy = int(target_ratio * sick_count)  # cast to int
+    samples_to_add = max(0, target_healthy - healthy_count)  # ensure non-negative int
+
+    if samples_to_add == 0:
+        # Already at or above the target ratio
+        print("No samples to add; already at or above target ratio.")
         return X_train, y_train
 
     # ====== Step 3: Extract only the healthy samples ======
@@ -28,31 +38,37 @@ def balance_healthy_samples(X_train, y_train):
     # ====== Step 4: Compute mean (mu) and variance (Var) for each feature ======
     mu = healthy_data.mean(axis=0)
     var = healthy_data.var(axis=0)
+    # Protect against zero-variance columns
+    var = np.clip(var, 1e-12, None)
 
     # ====== Step 5: Estimate alpha0 using Method of Moments ======
     alpha0_estimates = (mu * (1 - mu) / var) - 1
-    alpha0_estimates = alpha0_estimates[np.isfinite(alpha0_estimates) & (alpha0_estimates > 0)]
-    alpha0 = np.mean(alpha0_estimates)
+    mask = np.isfinite(alpha0_estimates) & (alpha0_estimates > 0)
+    if not np.any(mask):
+        raise ValueError("MoM failed: no positive/finite alpha0 estimates. Consider MLE fallback.")
+    alpha0 = float(np.mean(alpha0_estimates[mask]))
 
     # ====== Step 6: Compute alpha vector ======
     alpha_vector = mu * alpha0
-    print(f"Estimated alpha (mom): {alpha_vector}")
+    print(f"Estimated alpha (MoM): {alpha_vector}")
 
-    # ====== Step 7: Generate synthetic healthy samples ======
-    synthetic_samples = np.random.dirichlet(alpha_vector, size=samples_to_add)
+    # ====== Step 7: Generate synthetic healthy samples (size must be int) ======
+    synthetic_healthy = rng.dirichlet(alpha_vector, size=samples_to_add)
 
     # ====== Step 8: Append synthetic samples to the dataset ======
-    X_balanced = np.vstack([X_train, synthetic_samples])
-    y_balanced = np.hstack([y_train, np.array(['H'] * samples_to_add)])
+    X_balanced = np.vstack([X_train, synthetic_healthy])
+    y_balanced = np.hstack([y_train, np.array(['H'] * samples_to_add, dtype=y_train.dtype)])
 
+    # ====== Step 9: Report ======
     print(f"Original healthy samples: {healthy_count}")
     print(f"Original sick samples: {sick_count}")
     print(f"Synthetic healthy samples added: {samples_to_add}")
     print(f"Balanced healthy samples: {np.sum(y_balanced == 'H')}")
     print(f"Balanced sick samples: {np.sum(y_balanced == 'S')}")
+    print(f"Shapes: X={X_balanced.shape}, y={y_balanced.shape}")
 
     return X_balanced, y_balanced
-balance_healthy_samples(X_train, y_train)
+
 
 
 def balance_with_dirichlet_mle(X_train, y_train, target_ratio=9.0, seed=42):
@@ -104,12 +120,12 @@ def balance_with_dirichlet_mle(X_train, y_train, target_ratio=9.0, seed=42):
         "target_healthy": target_healthy,
         "alpha": alpha_hat
     }
+
+    print("Final healthy count:", info["healthy_count"])
+    print("Final sick count:", info["sick_count"])
+    print("Target healthy:", info["target_healthy"])
+    print("Estimated alpha (MLE):", info["alpha"])
+
     return X_balanced, y_balanced, synthetic_healthy, info
 
-Xb, yb, synth, info = balance_with_dirichlet_mle(X_train, y_train, target_ratio=9.0, seed=0)
 
-print("Final healthy count:", info["healthy_count"])
-print("Final sick count:", info["sick_count"])
-print("Target healthy:", info["target_healthy"])
-print("Estimated alpha (MLE):", info["alpha"])
-print("Shapes:", Xb.shape, yb.shape, synth.shape)
