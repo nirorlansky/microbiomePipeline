@@ -97,8 +97,8 @@ def prepare_microbiome_dataset(
 
 if __name__ == "__main__":
     # --- Example usage ---
-    MICROBIOME_CSV = "data_files/microbiome.csv"
-    METADATA_CSV = "data_files/metadata.csv"
+    MICROBIOME_CSV = "src/resources/microbiome.csv"
+    METADATA_CSV = "src/resources/metadata.csv"
 
     X_train, y_train, features, sample_ids = prepare_microbiome_dataset(
         MICROBIOME_CSV,
@@ -109,7 +109,15 @@ if __name__ == "__main__":
 
 
 print("balance_healthy_samples (MoM)\n")
-X_bal_mom, y_bal_mom = balance_healthy_samples(X_train, y_train)
+X_bal_mom, y_bal_mom =  balance_healthy_samples(
+    X_train,
+    y_train,
+    target_ratio=9.0,
+    seed=42,
+    use_dynamic_eps=True,
+    orders_below=3,
+    fallback=1e-12,
+)
 
 # Save MoM-balanced outputs
 pd.DataFrame(X_bal_mom, columns=features).to_csv("data_files/X_balanced_mom.csv", index=False)
@@ -117,7 +125,13 @@ pd.DataFrame({"y_train": y_bal_mom}).to_csv("data_files/y_balanced_mom.csv", ind
 
 print("\n\nbalance_with_dirichlet_mle (MLE)\n")
 X_bal_mle, y_bal_mle, synth_samples, info = balance_with_dirichlet_mle(
-    X_train, y_train, target_ratio=9.0, seed=42
+    X_train,
+    y_train,
+    target_ratio=9.0,
+    seed=42,
+    use_dynamic_eps=False,
+    orders_below=3,
+    fallback=1e-12,
 )
 
 # Save MLE-balanced outputs
