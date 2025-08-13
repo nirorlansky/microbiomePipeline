@@ -17,6 +17,8 @@ from steps.remainder_col import AddRemainder
 from samplers.dirichlet_new import DirichletSampler
 from samplers.smote import SmoteOverSampler
 
+import numpy as np
+from steps.duplicate_test import inflate_test_healthy_ratio
 
 identity_sampler = FunctionSampler(func=lambda X, y: (X, y))  # "no resampling" baseline
 
@@ -78,10 +80,17 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
 def make_splits(X, y, n_splits=5, random_state=42):
     cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     return list(cv.split(X, y))  # materialize once, reuse everywhere
+# Output: list of (train_index, test_index) tuples.
+# Each train_index and test_index are arrays of row indices from X and y.
+# Their lengths add up to the total number of samples, with no overlap.
+
 
 # ---------- Evaluate multiple strategies on the same splits ----------
-def evaluate_strategies(X, y, strategies, k_features=200, random_state=42):
+def evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=None):
     splits = make_splits(X, y, n_splits=5, random_state=random_state)
+
+    if test_healthy_ratio is not None: # inflate the healthy smaples in the tests
+        splits = inflate_test_healthy_ratio(splits, y, target_healthy_ratio=test_healthy_ratio)
 
     scorers = {
         "roc_auc": "roc_auc",
