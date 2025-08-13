@@ -23,8 +23,11 @@ def load_data(metadata_path, microbiome_path, serum_lipo_path):
 X, y = load_data(metadata_path, microbiome_path, serum_lipo_path)  
 strategies = {
     "No Resampling": "none",
-    # "SMOTE": "smote",
-    "Dirichlet MLE with thresholding": "Dirichlet_MLE_thresholding"
+    "SMOTE": "smote",
+    "Dirichlet MLE with thresholding": "Dirichlet_MLE_thresholding",
+    "Dirichlet MLE": "Dirichlet_MLE",
+    "Dirichlet MoM with thresholding": "Dirichlet_MoM_thresholding",
+    "Dirichlet MoM": "Dirichlet_MoM"
 }
 table = evaluate_strategies(X, y, strategies, k_features=200, random_state=42)
 print(table)
