@@ -35,5 +35,5 @@ strategies = {
 
 print("Evaluation Results:")
 
-table = evaluate_strategies(X, y, strategies, k_features=200, random_state=42, target_healthy_ratio=0.90)
+table = evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
 print(table)
