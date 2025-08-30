@@ -30,7 +30,7 @@ class SmoteSampler(BaseOverSampler):
     def _fit_resample(self, X, y):
         return self.smote_to_minority_share(
             X, y,
-            minority_share=self.minority_share,
+            minority_share=self.minority_share * 10,
             random_state=self.random_state,
             k_neighbors=self.k_neighbors,
             threshold=self.threshold,
@@ -44,7 +44,7 @@ class SmoteSampler(BaseOverSampler):
         self,
         X_train,
         y_train,
-        minority_share: float = 0.9,
+        minority_share: float = 9.0,
         random_state: int = 42,
         k_neighbors: int | None = None,
         threshold: float | None = None,
@@ -90,8 +90,8 @@ class SmoteSampler(BaseOverSampler):
         n_min = int(minority_mask.sum())
         majority_mask = ~minority_mask
         n_maj = int(majority_mask.sum())
-        ratio = minority_share / minority_share
-        target_min = int(np.ceil(ratio * n_maj))
+        ratio = {HEALTHY: int(minority_share*n_maj)}
+        target_min = int(np.ceil(minority_share*n_maj))
         n_to_add = max(0, target_min - n_min)
         if n_to_add == 0:
             print(f"No samples to add (minority '{minority_label}' count: {n_min}, target: {target_min}). Returning original data.")
@@ -156,7 +156,7 @@ class SmoteSampler(BaseOverSampler):
 
             print(
                 f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
-                f"k={k_neighbors}, preserve_zero_pattern=True"
+                f"k={k_neighbors}, preserve_zero_pattern=True | Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
             )
             return X_res, y_res
 
@@ -173,7 +173,7 @@ class SmoteSampler(BaseOverSampler):
             arr[arr < threshold] = 0
             print(
                 f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
-                f"k={k_neighbors}, threshold={threshold}"
+                f"k={k_neighbors}, threshold={threshold}| Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
             )
             return X_res, y_res
 
@@ -183,12 +183,12 @@ class SmoteSampler(BaseOverSampler):
             arr[mask] = 0
             print(
                 f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
-                f"k={k_neighbors}, applied per-feature eps zeroing"
+                f"k={k_neighbors}, applied per-feature eps zeroing | Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
             )
             return X_res, y_res
 
         print(
             f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
-            f"k={k_neighbors}, regular SMOTE"
+            f"k={k_neighbors}, regular SMOTE | Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
         )
         return X_res, y_res
