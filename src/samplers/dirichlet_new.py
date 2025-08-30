@@ -61,9 +61,9 @@ class DirichletSampler(BaseOverSampler):
         eps_repl = eps_vec * (10.0 ** (-orders_below))
         X2 = np.where(X <= 0, eps_repl, X)
 
-        rs = X2.sum(axis=1, keepdims=True)
-        rs = np.clip(rs, 1e-12, None)  # guard division
-        X2 = X2 / rs
+        rs = X2.sum(axis=1, keepdims=True) # sum of each row
+        rs = np.clip(rs, fallback, None)  # avoid divide-by-zero
+        X2 = X2 / rs # renormalize rows to sum to 1
         return X2, eps_vec
 
     def zero_below_eps_and_renormalize(self, synth_prop, eps_vec):
@@ -158,7 +158,7 @@ class DirichletSampler(BaseOverSampler):
         if method_l == "mom":
             # Method of Moments on proportions
             mu  = healthy_prop.mean(axis=0)
-            var = np.clip(healthy_prop.var(axis=0), 1e-12, None)
+            var = np.clip(healthy_prop.var(axis=0), fallback, None)
             alpha0_est = (mu * (1 - mu) / var) - 1
             mask = np.isfinite(alpha0_est) & (alpha0_est > 0)
             if not np.any(mask):
