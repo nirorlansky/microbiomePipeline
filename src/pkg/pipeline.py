@@ -15,7 +15,7 @@ from sklearn.base import clone
 from steps.relative_abundance import RelativeAbundance
 from steps.remainder_col import AddRemainder
 from samplers.dirichlet_new import DirichletSampler
-from samplers.smote import SmoteOverSampler
+from samplers.smote_new import SmoteSampler
 
 import numpy as np
 from steps.duplicate_test import inflate_test_healthy_ratio
@@ -31,13 +31,13 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
     if sampler == "none":
         samp = identity_sampler
     elif sampler == "smote_thresholding":
-        samp = SmoteOverSampler(threshold = 0.01)
+        samp = SmoteSampler(threshold = 0.01)
     elif sampler == "smote_preserve_zero_pattern":
-        samp = SmoteOverSampler(preserve_zero_pattern=True)
+        samp = SmoteSampler(preserve_zero_pattern=True)
     elif sampler == "smote_min_positive":
-        samp = SmoteOverSampler(use_feature_eps=True)
+        samp = SmoteSampler(use_feature_eps=True)
     elif sampler == "smote_only":
-        samp = SmoteOverSampler()
+        samp = SmoteSampler()
 
     elif sampler == "Dirichlet_MLE_thresholding":
         samp = DirichletSampler(
