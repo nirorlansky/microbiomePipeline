@@ -96,7 +96,7 @@ def evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_
     scorers = {
         "roc_auc": "roc_auc",
         "aupr": "average_precision",  # FIXED: use built-in string scorer
-        "f1": "f1",
+        "recall": "recall",
         "acc": "accuracy",
     }
 
@@ -113,7 +113,7 @@ def evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_
             n_jobs=-1,
             return_train_score=False
         )
-        summary = {m: scores[f"test_{m}"].mean() for m in ["roc_auc","aupr","f1","acc"]}
+        summary = {m: scores[f"test_{m}"].mean() for m in ["roc_auc","aupr","recall","acc"]}
         summary.update({"strategy": name})
         rows.append(summary)
 
