@@ -75,7 +75,7 @@ class SmoteSampler(BaseOverSampler):
             except ValueError:
                 y = LabelEncoder().fit_transform(y)
 
-        # --- check exclusivity ---
+        # Validations of parameters - cannot combine certain modes
         if preserve_zero_pattern and (threshold is not None and threshold > 0):
             raise ValueError("threshold cannot be used when preserve_zero_pattern=True.")
         if use_feature_eps and (threshold is not None and threshold > 0):
@@ -85,7 +85,7 @@ class SmoteSampler(BaseOverSampler):
 
         rng = np.random.default_rng(random_state)
 
-        # --- counts and target ---
+        # count how many healthy and sick samples, compute how many to add
         minority_mask = (y == minority_label)
         n_min = int(minority_mask.sum())
         majority_mask = ~minority_mask
@@ -98,7 +98,7 @@ class SmoteSampler(BaseOverSampler):
             X_out = X_train.copy() if hasattr(X_train, "copy") else np.array(X_train, copy=True)
             return X_out, y.copy()
 
-        # choose k
+        # Determine k_neighbors- if not set, use min(5, n_min-1)
         if k_neighbors is None:
             k_neighbors = max(1, min(5, n_min - 1))
         else:
@@ -113,23 +113,23 @@ class SmoteSampler(BaseOverSampler):
                 A = np.asarray(X_train)
             pos_mask = (A > 0)
             with np.errstate(invalid="ignore"):
-                col_min_pos = np.where(pos_mask, A, np.inf).min(axis=0)
-            col_has_pos = pos_mask.any(axis=0)
-            eps_vec = np.where(col_has_pos, col_min_pos, 0.0)
+                col_min_pos = np.where(pos_mask, A, np.inf).min(axis=0) # min positive per column
+            col_has_pos = pos_mask.any(axis=0) # which columns have any positive values
+            eps_vec = np.where(col_has_pos, col_min_pos, 0.0) # set eps=0 for columns with no positive values- it's not suppose to happen, but just in case
 
         # MODE 3: custom preserve_zero_pattern
         if preserve_zero_pattern:
-            X_min = X_train.loc[minority_mask] if hasattr(X_train, "loc") else X_train[minority_mask]
-            Xm = X_min.to_numpy(copy=False) if hasattr(X_min, "to_numpy") else np.asarray(X_min)
-
-            nn = NearestNeighbors(n_neighbors=k_neighbors + 1)
+            X_min = X_train.loc[minority_mask] if hasattr(X_train, "loc") else X_train[minority_mask] # x_min = samples of minority class
+            Xm = X_min.to_numpy(copy=False) if hasattr(X_min, "to_numpy") else np.asarray(X_min) # convert to numpy (if it isn't already)
+            # find k nearest neighbors of each minority sample (in minority set)
+            nn = NearestNeighbors(n_neighbors=k_neighbors + 1) # +1 for self
             nn.fit(Xm)
-            distances, indices = nn.kneighbors(Xm)
-            distances, indices = distances[:, 1:], indices[:, 1:]
+            distances, indices = nn.kneighbors(Xm) # 2 vectors: distances from each sample to its neighbors, and their indices
+            distances, indices = distances[:, 1:], indices[:, 1:] # remove self (first column)
 
-            zero_mask_min = (Xm == 0)
+            zero_mask_min = (Xm == 0) # 1 if a feature is zero (in a minority sample)
 
-            def pick_neighbor_for_base(i: int) -> int:
+            def pick_neighbor_for_base(i):
                 neigh_rows = indices[i]
                 neigh_dists = distances[i]
                 base_zero = zero_mask_min[i]
@@ -140,9 +140,9 @@ class SmoteSampler(BaseOverSampler):
                     return neigh_rows[best[0]]
                 return neigh_rows[best[np.argmin(neigh_dists[best])]]
 
-            new_samples = np.empty((n_to_add, Xm.shape[1]), dtype=Xm.dtype)
-            base_seq = np.tile(np.arange(n_min), int(np.ceil(n_to_add / n_min)))[:n_to_add]
-            for t, i in enumerate(base_seq):
+            new_samples = np.empty((n_to_add, Xm.shape[1]), dtype=Xm.dtype) # matrix to hold the new samples
+            base_seq = np.tile(np.arange(n_min), int(np.ceil(n_to_add / n_min)))[:n_to_add] # which minority samples to use as bases for new samples
+            for t, i in enumerate(base_seq): # for each new sample to create
                 j = pick_neighbor_for_base(i)
                 delta = rng.random()
                 new_samples[t] = Xm[i] + delta * (Xm[j] - Xm[i])
