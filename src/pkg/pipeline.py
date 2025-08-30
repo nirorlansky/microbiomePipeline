@@ -2,7 +2,6 @@ import pandas as pd
 from sklearn.feature_selection import SelectKBest, mutual_info_classif
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.metrics import make_scorer, average_precision_score
-from sklearn.linear_model import LogisticRegression
 
 
 import sys, os
@@ -16,6 +15,7 @@ from steps.relative_abundance import RelativeAbundance
 from steps.remainder_col import AddRemainder
 from samplers.dirichlet_new import DirichletSampler
 from samplers.smote_new import SmoteSampler
+from sklearn.ensemble import RandomForestClassifier
 
 import numpy as np
 from steps.duplicate_test import inflate_test_healthy_ratio
@@ -24,8 +24,8 @@ identity_sampler = FunctionSampler(func=lambda X, y: (X, y))  # "no resampling" 
 
 def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
     if model is None:
-        # Choose a deterministic solver; lbfgs is deterministic.
-        model = LogisticRegression(max_iter=500)
+        # Choose a deterministic solver- random forest with fixed random state
+        model = RandomForestClassifier(n_estimators=100, random_state=random_state, n_jobs=-1)
 
     # Choose sampler object
     if sampler == "none":
