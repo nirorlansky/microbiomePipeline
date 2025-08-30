@@ -31,6 +31,8 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
     # Choose sampler object
     if sampler == "none":
         samp = identity_sampler
+    elif sampler == "resample_random_samples":
+        samp = RandomOverSampler()
     elif sampler == "smote_thresholding":
         samp = SmoteSampler(threshold = 0.01)
     elif sampler == "smote_preserve_zero_pattern":

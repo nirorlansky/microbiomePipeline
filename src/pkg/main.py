@@ -31,7 +31,7 @@ strategies = {
     "Dirichlet MLE": "Dirichlet_MLE",
     "Dirichlet MoM with thresholding": "Dirichlet_MoM_thresholding",
     "Dirichlet MoM": "Dirichlet_MoM",
-    # "Random Oversampling": "resample_random_samples",
+    "Random Oversampling": "resample_random_samples",
 }
 
 print("Evaluation Results:")
