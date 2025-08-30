@@ -129,24 +129,27 @@ class SmoteSampler(BaseOverSampler):
 
             zero_mask_min = (Xm == 0) # 1 if a feature is zero (in a minority sample)
 
+            # function to pick the best neighbor for a given base sample- the one with the most overlapping zeros, and smallest distance as tiebreaker
             def pick_neighbor_for_base(i):
-                neigh_rows = indices[i]
+                neigh_rows = indices[i] 
                 neigh_dists = distances[i]
-                base_zero = zero_mask_min[i]
-                neigh_zeros = zero_mask_min[neigh_rows]
+                base_zero = zero_mask_min[i] # which features are zero in the base sample
+                neigh_zeros = zero_mask_min[neigh_rows] # which features are zero in each of the neighbor samples
                 overlaps = (neigh_zeros & base_zero).sum(axis=1)
-                best = np.where(overlaps == overlaps.max())[0]
+                best = np.where(overlaps == overlaps.max())[0] # which neighbors have the most overlapping zeros
                 if len(best) == 1:
-                    return neigh_rows[best[0]]
+                    return neigh_rows[best[0]] # only one best
+                # multiple best- pick the one with smallest distance
                 return neigh_rows[best[np.argmin(neigh_dists[best])]]
 
             new_samples = np.empty((n_to_add, Xm.shape[1]), dtype=Xm.dtype) # matrix to hold the new samples
             base_seq = np.tile(np.arange(n_min), int(np.ceil(n_to_add / n_min)))[:n_to_add] # which minority samples to use as bases for new samples
             for t, i in enumerate(base_seq): # for each new sample to create
-                j = pick_neighbor_for_base(i)
-                delta = rng.random()
-                new_samples[t] = Xm[i] + delta * (Xm[j] - Xm[i])
+                j = pick_neighbor_for_base(i) # pick the best neighbor
+                delta = rng.random() # random number in [0,1) 
+                new_samples[t] = Xm[i] + delta * (Xm[j] - Xm[i]) # create new sample
 
+            # numpy -> pandas if needed
             if hasattr(X_train, "loc"):
                 X_new = pd.DataFrame(new_samples, columns=X_train.columns)
                 X_res = pd.concat([X_train, X_new], ignore_index=True)
@@ -156,9 +159,10 @@ class SmoteSampler(BaseOverSampler):
 
             print(
                 f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
-                f"k={k_neighbors}, preserve_zero_pattern=True | Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
+                f"k={k_neighbors}, preserve_zero_pattern=True"
             )
             return X_res, y_res
+
 
         # MODES 1/2/4: regular SMOTE
         smote = SMOTE(
@@ -166,29 +170,33 @@ class SmoteSampler(BaseOverSampler):
             k_neighbors=k_neighbors,
             random_state=random_state
         )
-        X_res, y_res = smote.fit_resample(X_train, y)
+        X_res, y_res = smote.fit_resample(X_train, y) 
 
-        if threshold is not None and threshold > 0 and not use_feature_eps:
+        # MODE 2: global thresholding
+        if threshold is not None and threshold > 0 and not use_feature_eps: 
             arr = X_res.to_numpy(copy=False) if hasattr(X_res, "to_numpy") else X_res
-            arr[arr < threshold] = 0
+            arr[arr < threshold] = 0 # set values below threshold to zero
             print(
                 f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
                 f"k={k_neighbors}, threshold={threshold}| Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
             )
             return X_res, y_res
-
+        
+        # MODE 4: per-feature eps
         if use_feature_eps:
             arr = X_res.to_numpy(copy=False) if hasattr(X_res, "to_numpy") else X_res
-            mask = arr < eps_vec
-            arr[mask] = 0
+            mask = arr < eps_vec # where values are below per-feature eps
+            arr[mask] = 0 # set them to zero
             print(
                 f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
                 f"k={k_neighbors}, applied per-feature eps zeroing | Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
             )
             return X_res, y_res
 
+        # MODE 1: regular SMOTE, no thresholding
         print(
             f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
             f"k={k_neighbors}, regular SMOTE | Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
         )
+        
         return X_res, y_res
