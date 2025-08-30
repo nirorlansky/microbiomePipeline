@@ -30,7 +30,8 @@ strategies = {
     "Dirichlet MLE with thresholding": "Dirichlet_MLE_thresholding",
     "Dirichlet MLE": "Dirichlet_MLE",
     "Dirichlet MoM with thresholding": "Dirichlet_MoM_thresholding",
-    "Dirichlet MoM": "Dirichlet_MoM"
+    "Dirichlet MoM": "Dirichlet_MoM",
+    "Random Oversampling": "resample_random_samples",
 }
 
 print("Evaluation Results:")
