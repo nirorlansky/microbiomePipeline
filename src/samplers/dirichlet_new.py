@@ -157,14 +157,14 @@ class DirichletSampler(BaseOverSampler):
         method_l = method.lower()
         if method_l == "mom":
             # Method of Moments on proportions
-            mu  = healthy_prop.mean(axis=0)
-            var = np.clip(healthy_prop.var(axis=0), fallback, None)
-            alpha0_est = (mu * (1 - mu) / var) - 1
-            mask = np.isfinite(alpha0_est) & (alpha0_est > 0)
+            mu  = healthy_prop.mean(axis=0) # mean of each feature
+            var = np.clip(healthy_prop.var(axis=0), fallback, None) # var of each feature - if 0, set to fallback
+            alpha0_est = (mu * (1 - mu) / var) - 1 # alpha0 estimate per feature - 
+            mask = np.isfinite(alpha0_est) & (alpha0_est > 0) # keep only positive/finite estimates 
             if not np.any(mask):
                 raise ValueError("MoM failed: no positive/finite alpha0 estimates on proportions. Try method='mle' or use_dynamic_eps=True.")
-            alpha0   = float(np.mean(alpha0_est[mask]))
-            alpha_vec = mu * alpha0
+            alpha0   = float(np.mean(alpha0_est[mask])) # average of positive estimates- single scalar
+            alpha_vec = mu * alpha0 # final alpha vector - scaled by mean
         elif method_l == "mle":
             # Maximum Likelihood on proportions
             alpha_vec = dirichlet.mle(healthy_prop)
