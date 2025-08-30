@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.feature_selection import SelectKBest, mutual_info_classif
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.metrics import make_scorer, average_precision_score
+from functools import partial
 
 
 import sys, os
@@ -64,7 +65,7 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
 
     pipe = ImbPipeline([
         ("rel",     RelativeAbundance()),
-        ("select",  SelectKBest(mutual_info_classif, k=k_features, 
+        ("select",  SelectKBest(score_func=partial(mutual_info_classif, random_state=random_state), k=k_features
                                 # set MI randomness for determinism
                                 # mutual_info_classif(random_state=...) exists in sklearn
                                 )),
