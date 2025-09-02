@@ -15,6 +15,7 @@ from sklearn.base import clone
 from steps.relative_abundance import RelativeAbundance
 from steps.remainder_col import AddRemainder
 from samplers.dirichlet_new import DirichletSampler
+from samplers.random_resampler import ResampleSamples
 from samplers.smote_new import SmoteSampler
 from sklearn.ensemble import RandomForestClassifier
 
@@ -32,7 +33,7 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
     if sampler == "none":
         samp = identity_sampler
     elif sampler == "resample_random_samples":
-        samp = RandomOverSampler()
+        samp = ResampleSamples()
     elif sampler == "smote_thresholding":
         samp = SmoteSampler(threshold = 0.01)
     elif sampler == "smote_preserve_zero_pattern":
