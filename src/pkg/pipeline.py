@@ -25,7 +25,7 @@ from steps.duplicate_test import inflate_test_healthy_ratio
 
 identity_sampler = FunctionSampler(func=lambda X, y: (X, y))  # "no resampling" baseline
 
-def make_pipeline(k_features=200, sampler="none", random_state=42, model=None, feature_selection=True):
+def make_pipeline(k_features=200, sampler="none", random_state=42, model=None, feature_selection=True, eval=False):
     if model is None:
         # Choose a deterministic solver- random forest with fixed random state
         model = RandomForestClassifier(n_estimators=100, random_state=random_state, n_jobs=-1)
@@ -48,21 +48,29 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None, f
         samp = DirichletSampler(
             method="mle",
             use_dynamic_eps=True,
+            eval=eval,
+            method_string="Dirichlet_MLE_thresholding"
         )
     elif sampler == "Dirichlet_MLE":
         samp = DirichletSampler(
             method="mle",
             use_dynamic_eps=False,
+            eval=eval,
+            method_string="Dirichlet_MLE"
         )
     elif sampler == "Dirichlet_MoM_thresholding":
         samp = DirichletSampler(
             method="mom",
             use_dynamic_eps=True,
+            eval=eval,
+            method_string="Dirichlet_MoM_thresholding"
         )
     elif sampler == "Dirichlet_MoM":
         samp = DirichletSampler(
             method="mom",
             use_dynamic_eps=False,
+            eval=eval,
+            method_string="Dirichlet_MoM"
         )
     else:
         raise ValueError(f"Unknown sampler: {sampler}")
@@ -103,7 +111,6 @@ def evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_
 
     if test_healthy_ratio is not None: # inflate the healthy smaples in the tests
         splits = inflate_test_healthy_ratio(splits, y, target_healthy_ratio=test_healthy_ratio)
-
 
     rows = []
     for name, sampler_key in strategies.items():

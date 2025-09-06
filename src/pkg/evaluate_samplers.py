@@ -15,13 +15,11 @@ def evaluate_samplers(X, y, strategies, k_features=200, random_state=42,ratio=0.
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1-ratio, stratify=y, random_state=random_state)
     if test_healthy_ratio is not None:
         X_test, y_test = inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio=test_healthy_ratio, random_state=random_state)
-        # print train and test healthy/sick ratio
-        print(f"Train H/S: {int(np.sum(y_train == HEALTHY))}/{int(np.sum(y_train != HEALTHY))} | Test H/S: {int(np.sum(y_test == HEALTHY))}/{int(np.sum(y_test != HEALTHY))}")
-
+        
     results = []
     for name, sampler in strategies.items():
         print(f"Evaluating strategy: {name}")
-        pipe = make_pipeline(k_features=k_features, sampler=sampler, random_state=random_state, feature_selection=False)
+        pipe = make_pipeline(k_features=k_features, sampler=sampler, random_state=random_state, feature_selection=False, eval=True)
         pipe.fit(X_train, y_train)
         y_pred = pipe.predict(X_test)
         y_proba = pipe.predict_proba(X_test)[:, 1] if hasattr(pipe, "predict_proba") else None

@@ -103,6 +103,9 @@ def inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio
     X_to_add = X_arr[chosen_indices]
     y_to_add = y_arr[chosen_indices]
 
+    # print train and test healthy/sick ratio before and after
+    print(f"[INFLATE TEST] Original H/S: {nH}/{nS} | Target H/S: {target_nH}/{nS} | Added healthy: {len(y_to_add)} | Final H/S: {nH + len(y_to_add)}/{nS}")
+
     X_new = np.vstack([X_arr, X_to_add])
     y_new = np.hstack([y_arr, y_to_add])
 

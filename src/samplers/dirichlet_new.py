@@ -4,6 +4,7 @@ from imblearn.over_sampling.base import BaseOverSampler
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..")))
 from pkg.globals import *
+from samplers.evaluation import eval_healthy_and_synthetic
 
 class DirichletSampler(BaseOverSampler):
 
@@ -14,7 +15,9 @@ class DirichletSampler(BaseOverSampler):
                  method="mle",
                  use_dynamic_eps=False,
                  orders_below=3,
-                 fallback=1e-12):
+                 fallback=1e-12,
+                 eval=False,
+                 method_string=""):
         super().__init__(sampling_strategy=sampling_strategy)
         self.random_state = random_state
         self.jitter = jitter
@@ -22,6 +25,8 @@ class DirichletSampler(BaseOverSampler):
         self.use_dynamic_eps = use_dynamic_eps
         self.orders_below = orders_below
         self.fallback = fallback
+        self.eval = eval 
+        self.method_string = method_string
 
     def _fit_resample(self, X, y):
         return self.balance_healthy_dirichlet(
@@ -142,7 +147,7 @@ class DirichletSampler(BaseOverSampler):
 
         rs = healthy_data.sum(axis=1, keepdims=True)
         rs = np.clip(rs, 1e-12, None)
-        healthy_prop = healthy_data / rs
+        healthy_prop = healthy_data / rs 
 
         eps_vec = None
         if use_dynamic_eps:
@@ -177,6 +182,11 @@ class DirichletSampler(BaseOverSampler):
         # Optional post-process: zero below ORIGINAL per-feature eps, then renormalize
         if use_dynamic_eps and eps_vec is not None:
             synth_prop = self.zero_below_eps_and_renormalize(synth_prop, eps_vec)
+
+        if self.eval:
+            eval_healthy_and_synthetic(
+                healthy_prop, synth_prop, eps_vec=eps_vec, method_string=self.method_string
+            )
 
         # Append (rows all sum to 1)
         X_balanced = np.vstack([X_train, synth_prop])
