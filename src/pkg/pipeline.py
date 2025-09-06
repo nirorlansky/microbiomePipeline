@@ -24,7 +24,7 @@ from steps.duplicate_test import inflate_test_healthy_ratio
 
 identity_sampler = FunctionSampler(func=lambda X, y: (X, y))  # "no resampling" baseline
 
-def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
+def make_pipeline(k_features=200, sampler="none", random_state=42, model=None, feature_selection=True):
     if model is None:
         # Choose a deterministic solver- random forest with fixed random state
         model = RandomForestClassifier(n_estimators=100, random_state=random_state, n_jobs=-1)
@@ -66,16 +66,23 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None):
     else:
         raise ValueError(f"Unknown sampler: {sampler}")
 
-    pipe = ImbPipeline([
+    if not feature_selection:
+        pipe = ImbPipeline([
         ("rel",     RelativeAbundance()),
-        ("select",  SelectKBest(score_func=partial(mutual_info_classif, random_state=random_state), k=k_features
-                                # set MI randomness for determinism
-                                # mutual_info_classif(random_state=...) exists in sklearn
-                                )),
-        ("remainder", AddRemainder()),
         ("sampler", samp),     # runs only on train folds
         ("clf",     model),
     ])
+    else:
+        pipe = ImbPipeline([
+            ("rel",     RelativeAbundance()),
+            ("select",  SelectKBest(score_func=partial(mutual_info_classif, random_state=random_state), k=k_features
+                                    # set MI randomness for determinism
+                                    # mutual_info_classif(random_state=...) exists in sklearn
+                                    )),
+            ("remainder", AddRemainder()),
+            ("sampler", samp),     # runs only on train folds
+            ("clf",     model),
+        ])
     # If using mutual_info_classif with randomness, set via set_params:
     # pipe.set_params(select__score_func=partial(mutual_info_classif, random_state=random_state))
     return pipe
@@ -105,7 +112,7 @@ def evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_
 
     rows = []
     for name, sampler_key in strategies.items():
-        pipe = make_pipeline(k_features=k_features, sampler=sampler_key, random_state=random_state)
+        pipe = make_pipeline(k_features=k_features, sampler=sampler_key, random_state=random_state, feature_selection=False)
 
         # Use the same splits for everyone
         scores = cross_validate(
