@@ -1,4 +1,5 @@
 import numpy as np
+from pkg.globals import HEALTHY, SICK
 
 def inflate_test_healthy_ratio(splits, y, target_healthy_ratio=0.90):
     """
@@ -66,3 +67,43 @@ def inflate_test_healthy_ratio(splits, y, target_healthy_ratio=0.90):
         new_splits.append((train_idx, new_test_idx))
 
     return new_splits
+
+
+def inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio=0.9, random_state=42):
+    """
+    Duplicate existing healthy (label==0) samples in test set to reach target_healthy_ratio.
+    """
+    # Coerce labels to a NumPy array without copying when possible
+    y_arr = y_test.values if hasattr(y_test, "values") else np.asarray(y_test)
+    X_arr = X_test.values if hasattr(X_test, "values") else np.asarray(X_test)
+
+    healthy_mask = (y_arr == 0)  # 0 = healthy
+    sick_mask = ~healthy_mask     # assumes binary labels {0,1}
+
+    nH = int(healthy_mask.sum())
+    nS = int(sick_mask.sum())
+
+    # If one of the classes is absent, or already meeting the target, keep as is
+    if nS == 0 or nH == 0:
+        return X_test, y_test
+
+    # From H / (H + S) = r  =>  H = r/(1 - r) * S
+    ratio_factor = target_healthy_ratio / (1.0 - target_healthy_ratio)
+    target_nH = int(np.ceil(ratio_factor * nS))
+    if nH >= target_nH:
+        return X_test, y_test
+
+    # Number of additional healthy samples needed (by duplication)
+    need = target_nH - nH
+    healthy_indices = np.where(healthy_mask)[0]
+
+    np.random.seed(random_state)
+    chosen_indices = np.random.choice(healthy_indices, size=need, replace=True)
+
+    X_to_add = X_arr[chosen_indices]
+    y_to_add = y_arr[chosen_indices]
+
+    X_new = np.vstack([X_arr, X_to_add])
+    y_new = np.hstack([y_arr, y_to_add])
+
+    return X_new, y_new

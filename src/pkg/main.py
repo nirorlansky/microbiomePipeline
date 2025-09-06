@@ -1,6 +1,7 @@
 from pipeline import evaluate_strategies
 import numpy as np
 import pandas as pd
+from evaluate_samplers import evaluate_samplers
 
 microbiome_path = "./src/resources/microbiome.csv"
 serum_lipo_path = "./src/resources/serum_lipo.csv"
@@ -36,5 +37,6 @@ strategies = {
 
 print("Evaluation Results:")
 
-table = evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
+# table = evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
+table = evaluate_samplers(X, y, strategies, k_features=200, random_state=42, ratio=0.8, test_healthy_ratio=0.90)
 print(table)

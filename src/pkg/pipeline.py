@@ -18,6 +18,7 @@ from samplers.dirichlet_new import DirichletSampler
 from samplers.random_resampler import ResampleSamples
 from samplers.smote_new import SmoteSampler
 from sklearn.ensemble import RandomForestClassifier
+from pkg.globals import *
 
 import numpy as np
 from steps.duplicate_test import inflate_test_healthy_ratio
@@ -103,12 +104,6 @@ def evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_
     if test_healthy_ratio is not None: # inflate the healthy smaples in the tests
         splits = inflate_test_healthy_ratio(splits, y, target_healthy_ratio=test_healthy_ratio)
 
-    scorers = {
-        "roc_auc": "roc_auc",
-        "aupr": "average_precision",  # FIXED: use built-in string scorer
-        "recall": "recall",
-        "acc": "accuracy",
-    }
 
     rows = []
     for name, sampler_key in strategies.items():
@@ -118,7 +113,7 @@ def evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_
         scores = cross_validate(
             estimator=pipe,
             X=X, y=y,
-            scoring=scorers,
+            scoring=SCORES,
             cv=splits,              # <--- identical folds
             n_jobs=-1,
             return_train_score=False
@@ -127,4 +122,4 @@ def evaluate_strategies(X, y, strategies, k_features=200, random_state=42, test_
         summary.update({"strategy": name})
         rows.append(summary)
 
-    return pd.DataFrame(rows).set_index("strategy").sort_values("roc_auc", ascending=False)
+    return pd.DataFrame(rows).set_index("strategy").sort_values("aupr", ascending=False)
