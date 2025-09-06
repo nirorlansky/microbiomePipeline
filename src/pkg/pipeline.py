@@ -37,13 +37,13 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None, f
     elif sampler == "resample_random_samples":
         samp = ResampleSamples()
     elif sampler == "smote_thresholding":
-        samp = SmoteSampler(threshold = 0.01)
+        samp = SmoteSampler(threshold = 0.01, eval=eval, method_string="SMOTE with thresholding")
     elif sampler == "smote_preserve_zero_pattern":
-        samp = SmoteSampler(preserve_zero_pattern=True)
+        samp = SmoteSampler(preserve_zero_pattern=True, eval=eval, method_string="SMOTE with zero pattern")
     elif sampler == "smote_min_positive":
-        samp = SmoteSampler(use_feature_eps=True)
+        samp = SmoteSampler(use_feature_eps=True, method_string="SMOTE with min-positive vector", eval=eval)
     elif sampler == "smote_only":
-        samp = SmoteSampler()
+        samp = SmoteSampler(eval=eval, method_string="SMOTE only")
 
     elif sampler == "Dirichlet_MLE_thresholding":
         samp = DirichletSampler(
@@ -133,7 +133,7 @@ def run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, te
     return pd.DataFrame(rows).set_index("strategy").sort_values("aupr", ascending=False)
 
 
-def run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42,ratio=0.8,test_healthy_ratio=None):
+def run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42,ratio=0.8,test_healthy_ratio=None, eval=False):
     """
     Evaluate different sampling strategies on the given dataset.
     this function evaluate samplers with only test and train, no cross validation
@@ -146,7 +146,7 @@ def run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42,rat
         
     results = []
     for name, sampler in strategies.items():
-        pipe = make_pipeline(k_features=k_features, sampler=sampler, random_state=random_state, feature_selection=False, eval=True)
+        pipe = make_pipeline(k_features=k_features, sampler=sampler, random_state=random_state, feature_selection=False, eval=eval)
         pipe.fit(X_train, y_train)
         y_pred = pipe.predict(X_test)
         y_proba = pipe.predict_proba(X_test)[:, 1] if hasattr(pipe, "predict_proba") else None

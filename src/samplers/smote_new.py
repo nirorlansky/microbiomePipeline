@@ -5,6 +5,7 @@ from imblearn.over_sampling import SMOTE
 from sklearn.neighbors import NearestNeighbors
 from imblearn.over_sampling.base import BaseOverSampler
 from pkg.globals import *
+from samplers.evaluation import eval_healthy_and_synthetic
 
 
 class SmoteSampler(BaseOverSampler):
@@ -16,7 +17,9 @@ class SmoteSampler(BaseOverSampler):
                 threshold: float | None = None,
                 preserve_zero_pattern: bool = False,
                 use_feature_eps: bool = False,
-                minority_label: int = HEALTHY
+                minority_label: int = HEALTHY,
+                eval: bool = False,
+                method_string=""
                 ):
         super().__init__(sampling_strategy=minority_share) # target minority share
         self.minority_share = minority_share
@@ -26,6 +29,8 @@ class SmoteSampler(BaseOverSampler):
         self.preserve_zero_pattern = preserve_zero_pattern
         self.use_feature_eps = use_feature_eps
         self.minority_label = minority_label
+        self.eval = eval
+        self.method_string = method_string
 
     def _fit_resample(self, X, y):
         return self.smote_to_minority_share(
@@ -117,6 +122,8 @@ class SmoteSampler(BaseOverSampler):
             col_has_pos = pos_mask.any(axis=0) # which columns have any positive values
             eps_vec = np.where(col_has_pos, col_min_pos, 0.0) # set eps=0 for columns with no positive values- it's not suppose to happen, but just in case
 
+        n_original = len(X_train)
+
         # MODE 3: custom preserve_zero_pattern
         if preserve_zero_pattern:
             X_min = X_train.loc[minority_mask] if hasattr(X_train, "loc") else X_train[minority_mask] # x_min = samples of minority class
@@ -158,10 +165,16 @@ class SmoteSampler(BaseOverSampler):
             y_res = np.concatenate([y, np.full(n_to_add, minority_label, dtype=y.dtype)])
 
             print(
-                f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
-                f"k={k_neighbors}, preserve_zero_pattern=True"
+                f"[SMOTE] Added synthetic healthy: {n_to_add} (before: {n_min}, after: {n_min + n_to_add}) | "
+                f"Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())} for {self.method_string}"
             )
-            return X_res, y_res
+            if self.eval:
+                X_orig = X_res[:n_original]
+                X_synth = X_res[n_original:]
+                eval_healthy_and_synthetic(
+                    X_orig, X_synth, eps_vec=eps_vec, method_string=self.method_string
+                )
+                return X_res, y_res
 
 
         # MODES 1/2/4: regular SMOTE
@@ -180,7 +193,6 @@ class SmoteSampler(BaseOverSampler):
                 f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
                 f"k={k_neighbors}, threshold={threshold}| Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
             )
-            return X_res, y_res
         
         # MODE 4: per-feature eps
         if use_feature_eps:
@@ -191,12 +203,18 @@ class SmoteSampler(BaseOverSampler):
                 f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
                 f"k={k_neighbors}, applied per-feature eps zeroing | Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
             )
-            return X_res, y_res
 
         # MODE 1: regular SMOTE, no thresholding
         print(
-            f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
-            f"k={k_neighbors}, regular SMOTE | Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
+            f"[SMOTE] Added synthetic healthy: {n_to_add} (before: {n_min}, after: {n_min + n_to_add}) | "
+            f"Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())} for {self.method_string}"
         )
+
+        if self.eval:
+            X_orig = X_res[:n_original]
+            X_synth = X_res[n_original:]
+            eval_healthy_and_synthetic(
+                X_orig, X_synth, eps_vec=eps_vec, method_string=self.method_string
+            )
         
         return X_res, y_res
