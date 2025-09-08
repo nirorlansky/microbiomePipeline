@@ -90,6 +90,14 @@ class SmoteSampler(BaseOverSampler):
 
         rng = np.random.default_rng(random_state)
 
+        # put the minority samples first (for easier splitting later)
+        sort_idx = np.argsort(y != minority_label)  # minority samples first
+        y = y[sort_idx]
+        if hasattr(X_train, "iloc"):  # pandas
+            X_train = X_train.iloc[sort_idx].reset_index(drop=True) # reset index after sorting
+        else:  # numpy  
+            X_train = np.array(X_train)[sort_idx]
+
         # count how many healthy and sick samples, compute how many to add
         minority_mask = (y == minority_label)
         n_min = int(minority_mask.sum())
@@ -102,6 +110,7 @@ class SmoteSampler(BaseOverSampler):
             print(f"No samples to add (minority '{minority_label}' count: {n_min}, target: {target_min}). Returning original data.")
             X_out = X_train.copy() if hasattr(X_train, "copy") else np.array(X_train, copy=True)
             return X_out, y.copy()
+
 
         # Determine k_neighbors- if not set, use min(5, n_min-1)
         if k_neighbors is None:
@@ -169,7 +178,7 @@ class SmoteSampler(BaseOverSampler):
                 f"Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())} for {self.method_string}"
             )
             if self.eval:
-                X_orig = X_res[:n_original]
+                X_orig = X_res[:n_min]
                 X_synth = X_res[n_original:]
                 eval_healthy_and_synthetic(
                     X_orig, X_synth, eps_vec=eps_vec, method_string=self.method_string
@@ -211,8 +220,9 @@ class SmoteSampler(BaseOverSampler):
         )
 
         if self.eval:
-            X_orig = X_res[:n_original]
+            X_orig = X_res[:n_min]
             X_synth = X_res[n_original:]
+            print(f"sizes for eval: X_orig: {X_orig.shape}, X_synth: {X_synth.shape}")
             eval_healthy_and_synthetic(
                 X_orig, X_synth, eps_vec=eps_vec, method_string=self.method_string
             )
