@@ -73,6 +73,7 @@ def inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio
     """
     Duplicate existing healthy (label==0) samples in test set to reach target_healthy_ratio.
     """
+    rng = np.random.default_rng(random_state)
     # Coerce labels to a NumPy array without copying when possible
     y_arr = y_test.values if hasattr(y_test, "values") else np.asarray(y_test)
     X_arr = X_test.values if hasattr(X_test, "values") else np.asarray(X_test)
@@ -97,8 +98,8 @@ def inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio
     need = target_nH - nH
     healthy_indices = np.where(healthy_mask)[0]
 
-    np.random.seed(random_state)
-    chosen_indices = np.random.choice(healthy_indices, size=need, replace=True)
+    # Deterministic sampling of healthy indices
+    chosen_indices = rng.choice(healthy_indices, size=need, replace=True)
 
     X_to_add = X_arr[chosen_indices]
     y_to_add = y_arr[chosen_indices]
