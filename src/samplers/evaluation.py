@@ -16,7 +16,8 @@ def eval_healthy_and_synthetic(healthy_prop, synth_prop, eps_vec=None, method_st
     print(f"  - Variance explained by first two PCoA axes: {eval_pcoa['variance_explained']}")
     print(f"  - Number of real (healthy) samples: {eval_pcoa['n_real']}")
     print(f"  - Number of synthetic samples: {eval_pcoa['n_synth']}")
-
+    alpha_diversity(healthy_prop, synth_prop, method_string=method_string)
+    
     
 
 
@@ -25,8 +26,6 @@ def PCOA(healthy_prop, synth_prop, method_string, fraction=1, random_state=42):
     Compute PCoA (Bray–Curtis), plot real vs synthetic with fixed colors, and save to file.
     Returns a result dict with path, variance explained, and counts.
     """
-    # print sizes of inputs
-    print(f"[EVAL] PCOA input sizes: healthy_prop shape: {healthy_prop.shape}, synth_prop shape: {synth_prop.shape}")
     # Require a non-empty method_string for filename consistency
     if not isinstance(method_string, str) or method_string.strip() == "":
         raise ValueError("method_string must be a non-empty string (used in the saved filename).")
@@ -47,7 +46,7 @@ def PCOA(healthy_prop, synth_prop, method_string, fraction=1, random_state=42):
     subsample_indices = rng.choice(n_synth, size=n_subsample, replace=False)
     synth_prop = synth_prop[subsample_indices]
     # print sizes after subsampling
-    print(f"[EVAL] After subsampling to fraction={fraction}: healthy_prop shape: {healthy_prop.shape}, synth_prop shape: {synth_prop.shape}")
+    print(f"[PCoA] After subsampling to fraction={fraction}: healthy_prop shape: {healthy_prop.shape}, synth_prop shape: {synth_prop.shape}")
 
     # Concatenate samples and build labels: 0=real, 1=synthetic
     X = np.vstack([healthy_prop, synth_prop])
@@ -88,10 +87,142 @@ def PCOA(healthy_prop, synth_prop, method_string, fraction=1, random_state=42):
     plt.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
 
-    print(f"[EVAL] Saved PCoA plot to: {out_path}")
+    print(f"[PCoA] Saved PCoA plot to: {out_path}")
 
     return {
         "variance_explained": explained[:2].tolist(),
         "n_real": int((labels == 0).sum()),
         "n_synth": int((labels == 1).sum())
     }
+
+def alpha_diversity(healthy_prop, synth_prop, method_string=""):
+    """
+    Compute and compare alpha-diversity metrics for real (healthy_prop) vs synthetic (synth_prop),
+    print group summaries, and save a simple boxplot figure.
+
+    Metrics per sample:
+      - Shannon entropy (natural log)
+      - Simpson diversity (1 - sum(p^2))
+      - Richness (#features > 0)
+      - Pielou's evenness (H / log(richness), defined when richness >= 2)
+
+    Returns
+    -------
+    dict with per-group mean±std for each metric, Cohen's d, and the saved plot path.
+    """
+ 
+    # Per-sample metrics (arrays)
+    Hr, Sr, Rr, Jr = _alpha_metrics_per_sample(healthy_prop)   # real
+    Hs, Ss, Rs, Js = _alpha_metrics_per_sample(synth_prop)     # synthetic
+
+    # Summaries + effect sizes
+    results = {
+        "shannon": {
+            "real_mean_std":      _mean_std(Hr),
+            "synthetic_mean_std": _mean_std(Hs),
+            "cohens_d":           _cohens_d(Hr, Hs),
+        },
+        "simpson": {
+            "real_mean_std":      _mean_std(Sr),
+            "synthetic_mean_std": _mean_std(Ss),
+            "cohens_d":           _cohens_d(Sr, Ss),
+        },
+        "richness": {
+            "real_mean_std":      _mean_std(Rr),
+            "synthetic_mean_std": _mean_std(Rs),
+            "cohens_d":           _cohens_d(Rr, Rs),
+        },
+        "evenness": {
+            "real_mean_std":      _mean_std(Jr),
+            "synthetic_mean_std": _mean_std(Js),
+            "cohens_d":           _cohens_d(Jr, Js),
+        },
+        "n_real":  int(len(Hr)),
+        "n_synth": int(len(Hs)),
+    }
+
+    print(f"[ALPHA] Alpha diversity : {method_string}")
+    for name, key in [("Shannon", "shannon"), ("Simpson", "simpson"),
+                      ("Richness", "richness"), ("Evenness", "evenness")]:
+        r_mean, r_std = results[key]["real_mean_std"]
+        s_mean, s_std = results[key]["synthetic_mean_std"]
+        d = results[key]["cohens_d"]
+        print(f"  - {name:<8} | real: {r_mean:.3f} +- {r_std:.3f} | synth: {s_mean:.3f} +- {s_std:.3f} | d={d:.2f}")
+
+    # Boxplots
+    fig, axs = plt.subplots(1, 4, figsize=(14, 3.8), dpi=130)
+    axs[0].boxplot([Hr, Hs], labels=["real", "synthetic"], showfliers=False); axs[0].set_title("Shannon")
+    axs[1].boxplot([Sr, Ss], labels=["real", "synthetic"], showfliers=False); axs[1].set_title("Simpson (1 - Σp²)")
+    axs[2].boxplot([Rr, Rs], labels=["real", "synthetic"], showfliers=False); axs[2].set_title("Richness (#>0)")
+    axs[3].boxplot([Jr, Js], labels=["real", "synthetic"], showfliers=False); axs[3].set_title("Pielou's evenness")
+    for ax in axs: ax.grid(True, alpha=0.25)
+    fig.suptitle(f"Alpha diversity — {method_string}", y=1.03)
+    plt.tight_layout()
+
+    base_dir = Path(__file__).resolve().parent
+    out_dir  = base_dir / "ALPHA"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    safe_method = (method_string or "method").replace("/", "_")
+    out_path = out_dir / f"alpha_{safe_method}_{ts}.png"
+    plt.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  [ALPHA] Saved plot to: {out_path}")
+
+    return {"alpha_results": results, "alpha_plot_path": str(out_path)}
+
+
+# ---------------------- helpers (defined below the main function) ----------------------
+
+def _renorm_rows(X):
+    """Row-normalize to sum=1 (rows with sum=0 stay as-is)."""
+    import numpy as np
+    X = np.asarray(X, dtype=float)
+    rs = X.sum(axis=1, keepdims=True)           # (n, 1)
+    rs_safe = np.where(rs > 0.0, rs, 1.0)       # avoid divide-by-zero
+    return X / rs_safe                          # broadcasts (n,d)/(n,1)
+
+
+
+def _alpha_metrics_per_sample(X):
+    """
+    Compute per-sample alpha-diversity: Shannon, Simpson, Richness, Evenness.
+    Assumes rows sum to ~1; re-normalizes just in case.
+    """
+    with np.errstate(divide='ignore', invalid='ignore'):
+        X = _renorm_rows(X)
+
+        # Richness: count positive entries
+        richness = (X > 0).sum(axis=1).astype(float)
+
+        # Shannon entropy (natural log); ignore zeros to avoid log(0)
+        P = np.where(X > 0, X, np.nan)
+        H = -np.nansum(P * np.log(P), axis=1)
+
+        # Simpson diversity = 1 - sum(p^2)
+        simpson = 1.0 - np.sum(X**2, axis=1)
+
+        # Pielou's evenness = H / log(richness) when richness >= 2; else 0
+        denom = np.log(np.maximum(richness, 1.0))
+        evenness = np.where(richness >= 2.0, H / denom, 0.0)
+
+    return H, simpson, richness, evenness
+
+
+def _mean_std(a):
+    """Return (mean, std) as floats."""
+    a = np.asarray(a, dtype=float)
+    return float(np.nanmean(a)), float(np.nanstd(a, ddof=1))
+
+
+def _cohens_d(a, b):
+    """Cohen's d (pooled std)."""
+    a = np.asarray(a, float); b = np.asarray(b, float)
+    ma, mb = np.nanmean(a), np.nanmean(b)
+    sa, sb = np.nanstd(a, ddof=1), np.nanstd(b, ddof=1)
+    na, nb = len(a), len(b)
+    sp_num = (na - 1) * sa**2 + (nb - 1) * sb**2
+    sp_den = max(na + nb - 2, 1)
+    sp = np.sqrt(sp_num / sp_den) if sp_den > 0 else 1.0
+    sp = sp if sp > 1e-12 else 1e-12
+    return float((ma - mb) / sp)

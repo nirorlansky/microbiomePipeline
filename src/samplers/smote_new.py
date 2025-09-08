@@ -196,13 +196,22 @@ class SmoteSampler(BaseOverSampler):
 
         # MODE 2: global thresholding
         if threshold is not None and threshold > 0 and not use_feature_eps: 
-            arr = X_res.to_numpy(copy=False) if hasattr(X_res, "to_numpy") else X_res
-            arr[arr < threshold] = 0 # set values below threshold to zero
+            arr = X_res.to_numpy(copy=True) if hasattr(X_res, "to_numpy") else np.array(X_res, copy=True)  
+            # zero all values below threshold- but only for the synthetic samples
+            arr[n_original:][arr[n_original:] < threshold] = 0
+            # renormalize rows to sum to 1  
+            rs = arr.sum(axis=1, keepdims=True) # sum of each row
+            rs = np.clip(rs, 1e-12, None)  # avoid divide-by-zero
+            arr = arr / rs # renormalize rows to sum to 1   
+            if hasattr(X_res, "iloc"):  # pandas
+                X_res = pd.DataFrame(arr, columns=X_res.columns)    
+            else:  # numpy
+                X_res = arr 
             print(
                 f"Added {n_to_add} samples to class {minority_label} (before: {n_min}, after: {n_min + n_to_add}); "
-                f"k={k_neighbors}, threshold={threshold}| Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
-            )
-        
+                f"k={k_neighbors}, applied global threshold {threshold} | Final H/S: {int((y_res == minority_label).sum())}/{int((y_res != minority_label).sum())}"
+            )       
+            
         # MODE 4: per-feature eps
         if use_feature_eps:
             arr = X_res.to_numpy(copy=False) if hasattr(X_res, "to_numpy") else X_res

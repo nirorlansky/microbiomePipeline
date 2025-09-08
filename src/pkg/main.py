@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import os
+os.environ["SCIPY_ARRAY_API"] = "1"
 from pipeline import run_pipeline_cross_val, run_pipeline_with_test
 
 microbiome_path = "./src/resources/microbiome.csv"

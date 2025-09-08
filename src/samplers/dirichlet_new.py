@@ -16,6 +16,7 @@ class DirichletSampler(BaseOverSampler):
                  use_dynamic_eps=False,
                  orders_below=3,
                  fallback=1e-12,
+                 scale_factor=0.3,
                  eval=False,
                  method_string=""):
         super().__init__(sampling_strategy=sampling_strategy)
@@ -27,6 +28,7 @@ class DirichletSampler(BaseOverSampler):
         self.fallback = fallback
         self.eval = eval 
         self.method_string = method_string
+        self.scale_factor = scale_factor 
 
     def _fit_resample(self, X, y):
         return self.balance_healthy_dirichlet(
@@ -37,6 +39,7 @@ class DirichletSampler(BaseOverSampler):
             use_dynamic_eps=self.use_dynamic_eps,
             orders_below=self.orders_below,
             fallback=self.fallback,
+            scale_factor=self.scale_factor,
         )
 
     # ---------- helpers ----------
@@ -85,20 +88,6 @@ class DirichletSampler(BaseOverSampler):
             sp[~nz] = synth_prop[~nz]
         return sp
 
-
-        """
-        Zero-out synth_prop[:, j] where synth_prop[:, j] < eps_vec[j],
-        then renormalize each row to sum to 1. If a row becomes all zeros, fallback to original row.
-        """
-        sp = np.where(synth_prop < eps_vec, 0.0, synth_prop)
-        rs = sp.sum(axis=1, keepdims=True)
-        nz = (rs.squeeze() > 0)
-        if np.any(nz):
-            sp[nz] = sp[nz] / rs[nz, :]
-        if np.any(~nz):
-            sp[~nz] = synth_prop[~nz]
-        return sp
-
     # ---------- unified balancer ----------
 
     def balance_healthy_dirichlet(self,
@@ -110,6 +99,7 @@ class DirichletSampler(BaseOverSampler):
         use_dynamic_eps=False,
         orders_below=3,
         fallback=1e-12,
+        scale_factor=0.3,      # scale concentration by this factor to increase dispersion 
     ):
         """
         Balance by adding synthetic Healthy samples drawn from a Dirichlet fitted on the Healthy group.
@@ -145,9 +135,10 @@ class DirichletSampler(BaseOverSampler):
             print("No healthy samples in this fold; skipping oversampling.")
             return X_train, y_train
 
-        rs = healthy_data.sum(axis=1, keepdims=True)
-        rs = np.clip(rs, 1e-12, None)
-        healthy_prop = healthy_data / rs 
+        # rs = healthy_data.sum(axis=1, keepdims=True)
+        # rs = np.clip(rs, 1e-12, None)
+        # healthy_prop = healthy_data / rs # should already be 1
+        healthy_prop = healthy_data #####
 
         eps_vec = None
         if use_dynamic_eps:
@@ -162,22 +153,28 @@ class DirichletSampler(BaseOverSampler):
         method_l = method.lower()
         if method_l == "mom":
             # Method of Moments on proportions
-            mu  = healthy_prop.mean(axis=0) # mean of each feature
-            var = np.clip(healthy_prop.var(axis=0), fallback, None) # var of each feature - if 0, set to fallback
-            alpha0_est = (mu * (1 - mu) / var) - 1 # alpha0 estimate per feature - 
-            mask = np.isfinite(alpha0_est) & (alpha0_est > 0) # keep only positive/finite estimates 
-            if not np.any(mask):
-                raise ValueError("MoM failed: no positive/finite alpha0 estimates on proportions. Try method='mle' or use_dynamic_eps=True.")
-            alpha0   = float(np.mean(alpha0_est[mask])) # average of positive estimates- single scalar
-            alpha_vec = mu * alpha0 # final alpha vector - scaled by mean
+            # --- MoM (fixed) ---
+            mu  = healthy_prop.mean(axis=0)                       # mean per feature
+            var = healthy_prop.var(axis=0, ddof=1)                # sample variance
+            var = np.clip(var, fallback, None)                    # avoid zeros
+            num = float(np.sum(mu * (1.0 - mu)))
+            den = float(np.sum(var))
+            alpha0 = max(num / den - 1.0, 1e-3)                   # guard lower bound
+            alpha_vec = mu * alpha0
+
         elif method_l == "mle":
             # Maximum Likelihood on proportions
             alpha_vec = dirichlet.mle(healthy_prop)
         else:
             raise ValueError("method must be 'mle' or 'mom'.")
 
+        # Scale concentration to increase dispersion but keep the mean (mu stays the same)
+        tau = float(getattr(self, "tau", scale_factor))  
+        alpha_vec = np.maximum(1e-8, tau) * alpha_vec  # keep alphas positive
+
         # Sample synthetic proportions
         synth_prop = rng.dirichlet(alpha_vec, size=samples_to_add)
+
 
         # Optional post-process: zero below ORIGINAL per-feature eps, then renormalize
         if use_dynamic_eps and eps_vec is not None:
@@ -185,7 +182,7 @@ class DirichletSampler(BaseOverSampler):
 
         if self.eval:
             eval_healthy_and_synthetic(
-                healthy_prop, synth_prop, eps_vec=eps_vec, method_string=self.method_string
+                healthy_data, synth_prop, eps_vec=eps_vec, method_string=self.method_string
             )
 
         # Append (rows all sum to 1)

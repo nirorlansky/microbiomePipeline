@@ -50,7 +50,7 @@ def make_pipeline(k_features=200, sampler="none", random_state=42, model=None, f
             method="mle",
             use_dynamic_eps=True,
             eval=eval,
-            method_string="Dirichlet_MLE_thresholding"
+            method_string="Dirichlet_MLE_thresholding", 
         )
     elif sampler == "Dirichlet_MLE":
         samp = DirichletSampler(
