@@ -39,5 +39,5 @@ strategies = {
 print("Evaluation Results:")
 
 # table = run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
-table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, ratio=0.8, test_healthy_ratio=0.90, eval=True)
+table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=30, ratio=0.8, test_healthy_ratio=0.90, eval=False)
 print(table)
