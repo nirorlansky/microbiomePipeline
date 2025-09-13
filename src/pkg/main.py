@@ -3,6 +3,7 @@ import pandas as pd
 import os
 os.environ["SCIPY_ARRAY_API"] = "1"
 from pipeline import run_pipeline_cross_val, run_pipeline_with_test
+from pkg.globals import *
 
 microbiome_path = "./src/resources/microbiome.csv"
 serum_lipo_path = "./src/resources/serum_lipo.csv"
@@ -39,5 +40,17 @@ strategies = {
 print("Evaluation Results:")
 
 # table = run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
-table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, ratio=0.8, test_healthy_ratio=0.90, eval=True)
-print(table)
+# table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, train_test_ratio=0.8, test_healthy_ratio=0.90, eval=True)
+# print(table)
+
+
+all_tables = []
+for random_state in RANDOM_STATES:
+    print(f"Random State: {random_state}")
+    table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=random_state, train_test_ratio=0.8, test_healthy_ratio=0.90, eval=False)
+    print(table)
+    all_tables.append(table)
+
+final_table = pd.concat(all_tables).groupby("strategy").agg(["mean", "std"]) # mean and std over different random states
+print("Final averaged results over different random states:")
+print(final_table)

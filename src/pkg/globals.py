@@ -7,3 +7,5 @@ SCORES = {
         "recall": "recall",
         "acc": "accuracy",
     }
+
+RANDOM_STATES = [0, 42, 7, 100, 2024]

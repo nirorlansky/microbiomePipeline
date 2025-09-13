@@ -133,14 +133,14 @@ def run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, te
     return pd.DataFrame(rows).set_index("strategy").sort_values("aupr", ascending=False)
 
 
-def run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42,ratio=0.8,test_healthy_ratio=None, eval=False):
+def run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42,train_test_ratio=0.8,test_healthy_ratio=None, eval=False):
     """
     Evaluate different sampling strategies on the given dataset.
     this function evaluate samplers with only test and train, no cross validation
     """    
     #split to train and test
     from sklearn.model_selection import train_test_split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1-ratio, stratify=y, random_state=random_state)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1-train_test_ratio, stratify=y, random_state=random_state)
     if test_healthy_ratio is not None:
         X_test, y_test = inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio=test_healthy_ratio, random_state=random_state)
         
