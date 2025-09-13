@@ -8,4 +8,5 @@ SCORES = {
         "acc": "accuracy",
     }
 
+GROUP_INDEX_NAME = "strategy"
 RANDOM_STATES = [0, 42, 7, 100, 2024]
