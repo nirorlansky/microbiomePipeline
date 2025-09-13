@@ -24,16 +24,16 @@ def load_data(metadata_path, microbiome_path, serum_lipo_path):
 
 X, y = load_data(metadata_path, microbiome_path, serum_lipo_path)  
 strategies = {
-    # "No Resampling": "none",
-    # "SMOTE with thresholding": "smote_thresholding",
+    "No Resampling": "none",
+    "SMOTE with thresholding": "smote_thresholding",
     "SMOTE preserve_zero_pattern": "smote_preserve_zero_pattern",
-    # "SMOTE with min-positive vector": "smote_min_positive",
-    # "SMOTE only": "smote_only",
-    # "Dirichlet MLE with thresholding": "Dirichlet_MLE_thresholding",
-    # "Dirichlet MLE": "Dirichlet_MLE",
-    # "Dirichlet MoM with thresholding": "Dirichlet_MoM_thresholding",
-    # "Dirichlet MoM": "Dirichlet_MoM",
-    # "Random Oversampling": "resample_random_samples",
+    "SMOTE with min-positive vector": "smote_min_positive",
+    "SMOTE only": "smote_only",
+    "Dirichlet MLE with thresholding": "Dirichlet_MLE_thresholding",
+    "Dirichlet MLE": "Dirichlet_MLE",
+    "Dirichlet MoM with thresholding": "Dirichlet_MoM_thresholding",
+    "Dirichlet MoM": "Dirichlet_MoM",
+    "Random Oversampling": "resample_random_samples",
 }
 
 print("Evaluation Results:")
