@@ -138,7 +138,7 @@ def run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, te
     return pd.DataFrame(rows).set_index("strategy").sort_values("aupr", ascending=False)
 
 
-def run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42,train_test_ratio=0.8, sampling_ratio = 0.5, test_healthy_ratio=None, eval=False):
+def run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42,train_test_ratio=0.8, sampling_ratio = 1, test_healthy_ratio=None, eval=False):
     """
     Evaluate different sampling strategies on the given dataset.
     this function evaluate samplers with only test and train, no cross validation
