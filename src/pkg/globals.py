@@ -9,4 +9,4 @@ SCORES = {
     }
 
 GROUP_INDEX_NAME = "strategy"
-RANDOM_STATES = [0, 42, 7, 100, 2024]
+RANDOM_STATES = list(range(1, 101))  # list of random states to use for evaluation from 1-100
