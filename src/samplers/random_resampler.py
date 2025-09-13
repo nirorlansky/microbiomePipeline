@@ -47,13 +47,12 @@ class ResampleSamples(BaseOverSampler):
         if sick_count == 0 or target_ratio <= 0:
             return X, y
 
-        # p = target_ratio (share of HEALTHY after oversampling)
-        H_target = int(ceil((target_ratio / (1 - target_ratio)) * sick_count))
+        H_target = target_ratio * sick_count
 
         healthy_count = int(np.sum(y == minority_label))
         samples_to_add = H_target - healthy_count
         if samples_to_add <= 0:
-            print(f"[RANDOM] No need to add samples (already ≥ target share {target_ratio:.2f}).")
+            print(f"[RANDOM] No need to add samples (already >= target share {target_ratio:.2f}).")
             return X, y
 
         rng = np.random.default_rng(random_state)

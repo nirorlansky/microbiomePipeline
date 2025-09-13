@@ -34,7 +34,7 @@ class DirichletSampler(BaseOverSampler):
         return self.balance_healthy_dirichlet(
             X, y,
             method=self.method ,  # or "mom"
-            target_ratio=self.sampling_strategy*10,  # target ratio of Healthy to Sick
+            target_ratio=self.sampling_strategy,  # target ratio of Healthy to Sick
             seed=self.random_state,
             use_dynamic_eps=self.use_dynamic_eps,
             orders_below=self.orders_below,

@@ -11,7 +11,7 @@ from samplers.evaluation import eval_healthy_and_synthetic
 class SmoteSampler(BaseOverSampler):
 
     def __init__(self, 
-                minority_share: float = 0.9,
+                minority_share: float = 1,
                 random_state: int = 42,
                 k_neighbors: int | None = None,
                 threshold: float | None = None,
@@ -35,7 +35,7 @@ class SmoteSampler(BaseOverSampler):
     def _fit_resample(self, X, y):
         return self.smote_to_minority_share(
             X, y,
-            minority_share=self.minority_share * 10,
+            minority_share=self.minority_share,
             random_state=self.random_state,
             k_neighbors=self.k_neighbors,
             threshold=self.threshold,
