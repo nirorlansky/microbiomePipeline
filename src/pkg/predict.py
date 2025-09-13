@@ -7,9 +7,9 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(this_dir, ".."))
 sys.path.append(project_root)
 
-from pkg.globals import *
-from src.pkg.main import load_data
-from src.pkg.pipeline import make_pipeline
+from globals import *
+from main import load_data
+from pipeline import make_pipeline
 
 def run_and_export_best(
     metadata_path: str,
