@@ -24,6 +24,7 @@ def load_data(metadata_path, microbiome_path, serum_lipo_path):
     return X, y_binary
 
 X, y = load_data(metadata_path, microbiome_path, serum_lipo_path)  
+
 strategies = {
     "No Resampling": "none",
     "SMOTE with thresholding": "smote_thresholding",
@@ -40,14 +41,14 @@ strategies = {
 print("Evaluation Results:")
 
 # table = run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
-# table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, train_test_ratio=0.8, test_healthy_ratio=0.90, eval=True)
+# table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=1, eval=False)
 # print(table)
 
 
 all_tables = []
 for random_state in RANDOM_STATES:
     print(f"Random State: {random_state}")
-    table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=random_state, train_test_ratio=0.8, test_healthy_ratio=0.90, eval=False)
+    table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=random_state, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=1, eval=False)
     print(table)
     all_tables.append(table)
 
