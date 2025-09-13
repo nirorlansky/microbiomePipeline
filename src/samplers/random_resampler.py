@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from math import ceil
 from sklearn.preprocessing import LabelEncoder
 from imblearn.over_sampling import SMOTE
 from sklearn.neighbors import NearestNeighbors
@@ -41,21 +42,31 @@ class ResampleSamples(BaseOverSampler):
         """
         
         # randomly choose samples from minority class and add them to X, y until minority class reaches desired share
-        
-        sick_count    = int(np.sum(y == SICK))
-        target_healthy = int(target_ratio * sick_count)
-        healthy_count = int(np.sum(y == minority_label))
-        samples_to_add = target_healthy - healthy_count
-        if samples_to_add <= 0:
-            print(f"[RANDOM] No need to add samples, minority class already at or above target ratio {target_ratio}.")
+
+        sick_count = int(np.sum(y == SICK))
+        if sick_count == 0 or target_ratio <= 0:
             return X, y
-        np.random.seed(random_state)
+
+        # p = target_ratio (share of HEALTHY after oversampling)
+        H_target = int(ceil((target_ratio / (1 - target_ratio)) * sick_count))
+
+        healthy_count = int(np.sum(y == minority_label))
+        samples_to_add = H_target - healthy_count
+        if samples_to_add <= 0:
+            print(f"[RANDOM] No need to add samples (already ≥ target share {target_ratio:.2f}).")
+            return X, y
+
+        rng = np.random.default_rng(random_state)
         minority_indices = np.where(y == minority_label)[0]
-        chosen_indices = np.random.choice(minority_indices, size=samples_to_add, replace=True
-        )
+        chosen_indices = rng.choice(minority_indices, size=samples_to_add, replace=True)
+
         X_to_add = X[chosen_indices]
         y_to_add = y[chosen_indices]
         X_balanced = np.vstack([X, X_to_add])
         y_balanced = np.hstack([y, y_to_add])
-        print(f"[RANDOM] Added synthetic healthy: {samples_to_add} | Final H/S: {int(np.sum(y_balanced == minority_label))}/{int(np.sum(y_balanced != minority_label))}")
+
+        H_final = int(np.sum(y_balanced == minority_label))
+        S_final = int(np.sum(y_balanced != minority_label))
+        print(f"[RANDOM] Added synthetic healthy: {samples_to_add} | Final H/S: {H_final}/{S_final} (~{H_final/(H_final+S_final):.1%} healthy)")
         return X_balanced, y_balanced
+
