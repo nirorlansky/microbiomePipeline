@@ -1,0 +1,6 @@
+PERMANOVA (braycurtis) — SMOTE with zero pattern
+F statistic: 2.489932
+p-value: 0.004
+permutations: 999
+n_real: 136
+n_synth: 8594
