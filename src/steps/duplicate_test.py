@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from pkg.globals import HEALTHY, SICK
 
 def inflate_test_healthy_ratio(splits, y, target_healthy_ratio=0.90):
@@ -65,26 +66,34 @@ def inflate_test_healthy_ratio(splits, y, target_healthy_ratio=0.90):
         # Preserve original order and append duplicates at the end
         new_test_idx = np.concatenate([test_idx, duplicates])
         new_splits.append((train_idx, new_test_idx))
+    print(f"[INFLATE TEST] with cross_val target healthy ratio: {target_healthy_ratio:.2f} | Original H/S: {nH}/{nS} | Target H/S: {target_nH}/{nS} | Added healthy: {len(duplicates)} | Final H/S: {nH + len(duplicates)}/{nS}")
 
     return new_splits
 
 
-def inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio=0.9, random_state=42):
+def inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio=0.9):
     """
-    Duplicate existing healthy (label==0) samples in test set to reach target_healthy_ratio.
+    Deterministically duplicate existing healthy (label==0) samples in the test set
+    to reach target_healthy_ratio. No randomness: distribute duplicates as evenly
+    as possible across healthy samples; if there's a remainder, the first samples
+    get +1 (at most one extra over others).
     """
-    rng = np.random.default_rng(random_state)
-    # Coerce labels to a NumPy array without copying when possible
-    y_arr = y_test.values if hasattr(y_test, "values") else np.asarray(y_test)
-    X_arr = X_test.values if hasattr(X_test, "values") else np.asarray(X_test)
+    # Preserve pandas types if provided
+    is_df = hasattr(X_test, "values") and hasattr(X_test, "columns")
+    is_series = hasattr(y_test, "values") and hasattr(y_test, "name")
 
+    # Coerce to NumPy arrays (without copying when possible)
+    X_arr = X_test.values if hasattr(X_test, "values") else np.asarray(X_test)
+    y_arr = y_test.values if hasattr(y_test, "values") else np.asarray(y_test)
+
+    # Build healthy/sick masks
     healthy_mask = (y_arr == 0)  # 0 = healthy
     sick_mask = ~healthy_mask     # assumes binary labels {0,1}
 
     nH = int(healthy_mask.sum())
     nS = int(sick_mask.sum())
 
-    # If one of the classes is absent, or already meeting the target, keep as is
+    # If one of the classes is absent, or already meets target, return as-is
     if nS == 0 or nH == 0:
         return X_test, y_test
 
@@ -94,20 +103,31 @@ def inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio
     if nH >= target_nH:
         return X_test, y_test
 
-    # Number of additional healthy samples needed (by duplication)
+    # How many additional healthy samples are needed?
     need = target_nH - nH
-    healthy_indices = np.where(healthy_mask)[0]
+    healthy_indices = np.where(healthy_mask)[0]  # positions within current test set
 
-    # Deterministic sampling of healthy indices
-    chosen_indices = rng.choice(healthy_indices, size=need, replace=True)
+    # Deterministic, even distribution of duplicates across existing healthy samples
+    base = need // nH
+    extra = need % nH
+    reps = np.full(nH, base, dtype=int)
+    if extra:
+        reps[:extra] += 1  # first 'extra' healthy samples receive +1 duplicate
 
-    X_to_add = X_arr[chosen_indices]
-    y_to_add = y_arr[chosen_indices]
+    # Build the duplicate index vector in original order, appended at the end
+    duplicates_pos = np.repeat(healthy_indices, reps)
 
-    # print train and test healthy/sick ratio before and after
-    print(f"[INFLATE TEST] Original H/S: {nH}/{nS} | Target H/S: {target_nH}/{nS} | Added healthy: {len(y_to_add)} | Final H/S: {nH + len(y_to_add)}/{nS}")
+    # Append duplicates to X and y (preserving original order first)
+    X_new = np.vstack([X_arr, X_arr[duplicates_pos]])
+    y_new = np.hstack([y_arr, y_arr[duplicates_pos]])
 
-    X_new = np.vstack([X_arr, X_to_add])
-    y_new = np.hstack([y_arr, y_to_add])
+    # (Optional) restore pandas types to keep downstream pipelines happy
+    if is_df:
+        X_new = pd.DataFrame(X_new, columns=X_test.columns)
+    if is_series:
+        y_new = pd.Series(y_new, name=y_test.name)
+
+    print(f"[INFLATE TEST] no cross_val Original H/S: {nH}/{nS} | Target H/S: {target_nH}/{nS} | Added healthy: {len(duplicates_pos)} | Final H/S: {nH + len(duplicates_pos)}/{nS}")
 
     return X_new, y_new
+
