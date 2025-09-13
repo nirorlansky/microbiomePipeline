@@ -21,6 +21,7 @@ def run_and_export_best(
     k_features: int = 200,
     random_state: int = 42,
     eval: bool = False,
+    sampling_ratio: int = 1,
 ):
     """
     Train the chosen pipeline on ALL labeled data, then predict on unlabeled microbiome.csv
@@ -50,6 +51,7 @@ def run_and_export_best(
         random_state=random_state,
         feature_selection=False,
         eval=eval,
+        sampling_ratio=sampling_ratio,
     )
     pipe.fit(X, y)
 
@@ -98,4 +100,5 @@ if __name__ == "__main__":
         k_features=200,
         random_state=42,
         eval=False,
+        sampling_ratio=1
     )
