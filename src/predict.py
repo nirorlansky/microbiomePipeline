@@ -7,7 +7,8 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(this_dir, ".."))
 sys.path.append(project_root)
 
-from src.pkg.main import load_data, strategies
+from pkg.globals import *
+from src.pkg.main import load_data
 from src.pkg.pipeline import make_pipeline
 
 def run_and_export_best(
@@ -42,7 +43,7 @@ def run_and_export_best(
     )
 
     # Build and train pipeline using the best strategy
-    best_sampler = strategies[best_strategy_name]
+    best_sampler = STRATEGIES[best_strategy_name]
     pipe = make_pipeline(
         k_features=k_features,
         sampler=best_sampler,
@@ -86,16 +87,15 @@ def run_and_export_best(
 
     print(f"Predictions written to {output_path}")
 
-
-
-run_and_export_best(
-    metadata_path="./src/resources/metadata.csv",
-    microbiome_labeled_path="./src/resources/microbiome.csv",  # training data with labels
-    serum_lipo_path="./src/resources/serum_lipo.csv",
-    microbiome_unlabeled_path="./test/microbiome.csv",  # unlabeled data to predict
-    best_strategy_name="SMOTE only",  
-    output_path="output.csv",
-    k_features=200,
-    random_state=42,
-    eval=False,
-)
+if __name__ == "__main__":
+    run_and_export_best(
+        metadata_path="./src/resources/metadata.csv",
+        microbiome_labeled_path="./src/resources/microbiome.csv",  # training data with labels
+        serum_lipo_path="./src/resources/serum_lipo.csv",
+        microbiome_unlabeled_path="./test/microbiome.csv",  # unlabeled data to predict
+        best_strategy_name="Random Oversampling",  
+        output_path="output.csv",
+        k_features=200,
+        random_state=42,
+        eval=False,
+    )

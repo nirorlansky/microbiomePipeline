@@ -27,7 +27,7 @@ from steps.duplicate_test import inflate_test_healthy_ratio, inflate_test_health
 
 identity_sampler = FunctionSampler(func=lambda X, y: (X, y))  # "no resampling" baseline
 
-def make_pipeline(k_features=200, sampler="none", random_state=42, model=None, feature_selection=True, eval=False, sampling_ratio=0.5):
+def make_pipeline(k_features=200, sampler="none", random_state=42, model=None, feature_selection=True, eval=False, sampling_ratio=1):
     if model is None:
         # Choose a deterministic solver- random forest with fixed random state
         model = RandomForestClassifier(n_estimators=100, random_state=random_state, n_jobs=-1)

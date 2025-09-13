@@ -5,12 +5,6 @@ os.environ["SCIPY_ARRAY_API"] = "1"
 from pipeline import run_pipeline_cross_val, run_pipeline_with_test
 from pkg.globals import *
 
-microbiome_path = "./src/resources/microbiome.csv"
-serum_lipo_path = "./src/resources/serum_lipo.csv"
-metadata_path = "./src/resources/metadata.csv"
-
-
-
 def load_data(metadata_path, microbiome_path, serum_lipo_path):
     metadata = pd.read_csv(metadata_path)
     microbiome = pd.read_csv(microbiome_path)
@@ -23,36 +17,31 @@ def load_data(metadata_path, microbiome_path, serum_lipo_path):
     y_binary = (y != '8').astype(int)
     return X, y_binary
 
-X, y = load_data(metadata_path, microbiome_path, serum_lipo_path)  
+if __name__ == "__main__":
 
-strategies = {
-    "No Resampling": "none",
-    "SMOTE with thresholding": "smote_thresholding",
-    "SMOTE preserve_zero_pattern": "smote_preserve_zero_pattern",
-    "SMOTE with min-positive vector": "smote_min_positive",
-    "SMOTE only": "smote_only",
-    "Dirichlet MLE with thresholding": "Dirichlet_MLE_thresholding",
-    "Dirichlet MLE": "Dirichlet_MLE",
-    "Dirichlet MoM with thresholding": "Dirichlet_MoM_thresholding",
-    "Dirichlet MoM": "Dirichlet_MoM",
-    "Random Oversampling": "resample_random_samples",
-}
+    microbiome_path = "./src/resources/microbiome.csv"
+    serum_lipo_path = "./src/resources/serum_lipo.csv"
+    metadata_path = "./src/resources/metadata.csv"
 
-print("Evaluation Results:")
+    X, y = load_data(metadata_path, microbiome_path, serum_lipo_path)  
 
-# table = run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
-# table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=1, eval=False)
-# print(table)
+    strategies = STRATEGIES
+
+    print("Evaluation Results:")
+
+    # table = run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
+    # table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=1, eval=False)
+    # print(table)
 
 
-all_tables = []
-for random_state in RANDOM_STATES:
-    print(f"Random State: {random_state}")
-    table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=random_state, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=1, eval=False)
-    print(table)
-    all_tables.append(table)
+    all_tables = []
+    for random_state in RANDOM_STATES:
+        print(f"Random State: {random_state}")
+        table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=random_state, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=1, eval=False)
+        print(table)
+        all_tables.append(table)
 
-final_table = pd.concat(all_tables).groupby(level=GROUP_INDEX_NAME).agg(["mean", "std"]).sort_values(("AUPR", "mean"), ascending=False) # mean and std over different random states
-print("Final averaged results over different random states:")
-print(final_table)
-final_table.to_csv("./final_evaluation_results.csv")
+    final_table = pd.concat(all_tables).groupby(level=GROUP_INDEX_NAME).agg(["mean", "std"]).sort_values(("AUPR", "mean"), ascending=False) # mean and std over different random states
+    print("Final averaged results over different random states:")
+    print(final_table)
+    final_table.to_csv("./final_evaluation_results.csv")
