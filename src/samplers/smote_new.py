@@ -21,8 +21,11 @@ class SmoteSampler(BaseOverSampler):
                 eval: bool = False,
                 method_string=""
                 ):
-        super().__init__(sampling_strategy=minority_share) # target minority share
-        self.minority_share = minority_share
+        # ONLY CHANGE: interpret minority_share as integer factor k and map to p = k/(1+k)
+        _factor = int(minority_share)
+        _p = _factor / (1.0 + _factor)
+        super().__init__(sampling_strategy=_p) # target minority share
+        self.minority_share = _factor
         self.random_state = random_state
         self.k_neighbors = k_neighbors
         self.threshold = threshold
@@ -231,7 +234,7 @@ class SmoteSampler(BaseOverSampler):
         if self.eval:
             X_orig = X_res[:n_min]
             X_synth = X_res[n_original:]
-            print(f"sizes for eval: X_orig: {X_orig.shape}, X_synth: {X_synth.shape}")
+            print(f"sizes for eval: {X_orig.shape}, {X_synth.shape}")
             eval_healthy_and_synthetic(
                 X_orig, X_synth, eps_vec=eps_vec, method_string=self.method_string
             )
