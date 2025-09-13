@@ -51,6 +51,7 @@ for random_state in RANDOM_STATES:
     print(table)
     all_tables.append(table)
 
-final_table = pd.concat(all_tables).groupby("strategy").agg(["mean", "std"]) # mean and std over different random states
+final_table = pd.concat(all_tables).groupby(level=GROUP_INDEX_NAME).agg(["mean", "std"]).sort_values(("AUPR", "mean"), ascending=False) # mean and std over different random states
 print("Final averaged results over different random states:")
 print(final_table)
+final_table.to_csv("./final_evaluation_results.csv")

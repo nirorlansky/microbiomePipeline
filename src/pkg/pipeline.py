@@ -4,6 +4,7 @@ from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.metrics import make_scorer, average_precision_score
 from functools import partial
 from sklearn.metrics import roc_auc_score, average_precision_score, recall_score, accuracy_score
+from sklearn.model_selection import train_test_split
 
 
 import sys, os
@@ -139,17 +140,16 @@ def run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42,tra
     this function evaluate samplers with only test and train, no cross validation
     """    
     #split to train and test
-    from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1-train_test_ratio, stratify=y, random_state=random_state)
     if test_healthy_ratio is not None:
-        X_test, y_test = inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio=test_healthy_ratio, random_state=random_state)
+        X_test, y_test = inflate_test_healthy_ratio_no_cross_val(X_test, y_test, target_healthy_ratio=test_healthy_ratio)
         
     results = []
     for name, sampler in strategies.items():
         pipe = make_pipeline(k_features=k_features, sampler=sampler, random_state=random_state, feature_selection=False, eval=eval)
         pipe.fit(X_train, y_train)
         y_pred = pipe.predict(X_test)
-        y_proba = pipe.predict_proba(X_test)[:, 1] if hasattr(pipe, "predict_proba") else None
+        y_proba = pipe.predict_proba(X_test)[:, 1] if hasattr(pipe, "predict_proba") else None # predict probabilities for ROC AUC and AUPR
 
         roc_auc = roc_auc_score(y_test, y_proba) if y_proba is not None else np.nan
         aupr = average_precision_score(y_test, y_proba) if y_proba is not None else np.nan
@@ -157,10 +157,10 @@ def run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42,tra
         acc = accuracy_score(y_test, y_pred)
 
         results.append({
-            "Strategy": name,
+            GROUP_INDEX_NAME: name,
             "ROC AUC": roc_auc,
             "AUPR": aupr,
             "Recall": recall,
             "Accuracy": acc
         })
-    return pd.DataFrame(results).set_index("Strategy").sort_values("AUPR", ascending=False)
+    return pd.DataFrame(results).set_index(GROUP_INDEX_NAME).sort_values("AUPR", ascending=False)
