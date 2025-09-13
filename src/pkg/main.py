@@ -24,20 +24,20 @@ def load_data(metadata_path, microbiome_path, serum_lipo_path):
 
 X, y = load_data(metadata_path, microbiome_path, serum_lipo_path)  
 strategies = {
-    "No Resampling": "none",
-    "SMOTE with thresholding": "smote_thresholding",
+    # "No Resampling": "none",
+    # "SMOTE with thresholding": "smote_thresholding",
     "SMOTE preserve_zero_pattern": "smote_preserve_zero_pattern",
-    "SMOTE with min-positive vector": "smote_min_positive",
-    "SMOTE only": "smote_only",
-    "Dirichlet MLE with thresholding": "Dirichlet_MLE_thresholding",
-    "Dirichlet MLE": "Dirichlet_MLE",
-    "Dirichlet MoM with thresholding": "Dirichlet_MoM_thresholding",
-    "Dirichlet MoM": "Dirichlet_MoM",
-    "Random Oversampling": "resample_random_samples",
+    # "SMOTE with min-positive vector": "smote_min_positive",
+    # "SMOTE only": "smote_only",
+    # "Dirichlet MLE with thresholding": "Dirichlet_MLE_thresholding",
+    # "Dirichlet MLE": "Dirichlet_MLE",
+    # "Dirichlet MoM with thresholding": "Dirichlet_MoM_thresholding",
+    # "Dirichlet MoM": "Dirichlet_MoM",
+    # "Random Oversampling": "resample_random_samples",
 }
 
 print("Evaluation Results:")
 
 # table = run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
-table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=30, ratio=0.8, test_healthy_ratio=0.90, eval=False)
+table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, ratio=0.8, test_healthy_ratio=0.90, eval=True)
 print(table)
