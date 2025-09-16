@@ -33,6 +33,19 @@ def PCOA(healthy_prop, synth_prop, method_string, fraction=1, random_state=42):
     Compute PCoA (Bray–Curtis), plot real vs synthetic with fixed colors, and save to file.
     Returns a result dict with path, variance explained, and counts.
     """
+    # Validate and normalize fraction
+    if fraction is None:
+        fraction = 1.0
+    try:
+        frac = float(fraction)
+    except Exception:
+        frac = 1.0
+    if frac > 1.0:
+        frac = min(1.0, frac / (1.0 + frac))
+    if frac <= 0.0:
+        frac = 1e-9 
+    fraction = frac
+
     # Require a non-empty method_string for filename consistency
     if not isinstance(method_string, str) or method_string.strip() == "":
         raise ValueError("method_string must be a non-empty string (used in the saved filename).")

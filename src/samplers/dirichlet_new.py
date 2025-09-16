@@ -145,7 +145,7 @@ class DirichletSampler(BaseOverSampler):
 
         if self.eval:
             eval_healthy_and_synthetic(
-                healthy_data, synth_prop, eps_vec=eps_vec, method_string=self.method_string
+                healthy_data, synth_prop, eps_vec=eps_vec, method_string=self.method_string, fraction=self.factor
             )
 
         X_balanced = np.vstack([X_train, synth_prop])
