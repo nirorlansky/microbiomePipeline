@@ -17,7 +17,7 @@ class DirichletSampler(BaseOverSampler):
                  use_dynamic_eps=False,
                  orders_below=3,
                  fallback=1e-12,
-                 scale_factor=0.3,
+                 scale_factor=0.1,
                  eval=False,
                  method_string=""):
 

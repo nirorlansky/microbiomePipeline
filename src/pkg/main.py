@@ -30,14 +30,14 @@ if __name__ == "__main__":
     print("Evaluation Results:")
 
     # table = run_pipeline_cross_val(X, y, strategies, k_features=200, random_state=42, test_healthy_ratio=0.90)
-    table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=9, eval=True)
-    print(table)
+    # table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=42, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=9, eval=True)
+    # print(table)
 
 
     all_tables = []
     for random_state in RANDOM_STATES:
         print(f"Random State: {random_state}")
-        table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=random_state, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=1, eval=False)
+        table = run_pipeline_with_test(X, y, strategies, k_features=200, random_state=random_state, train_test_ratio=0.8, test_healthy_ratio=0.90, sampling_ratio=9, eval=False)
         print(table)
         all_tables.append(table)
 
